@@ -1,8 +1,10 @@
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
 import { useCanvas } from './hooks/useCanvas';
+import { usePresence } from './hooks/usePresence';
 import LoginPage from './components/Auth/LoginPage';
 import BoardCanvas from './components/Board/BoardCanvas';
 import BoardToolbar from './components/Board/BoardToolbar';
+import UserList from './components/Presence/UserList';
 
 function AppContent() {
   const { user, loading, signOut } = useAuth();
@@ -19,6 +21,8 @@ function AppContent() {
     zoomOut,
     resetView,
   } = useCanvas();
+
+  const { presenceUsers, updateCursorPosition, myColor } = usePresence(user);
 
   if (loading) {
     return (
@@ -46,6 +50,11 @@ function AppContent() {
         onSignOut={signOut}
         user={user}
       />
+      <UserList
+        presenceUsers={presenceUsers}
+        currentUser={user}
+        myColor={myColor}
+      />
       <BoardCanvas
         stageScale={stageScale}
         stagePosition={stagePosition}
@@ -53,6 +62,8 @@ function AppContent() {
         selectedColor={selectedColor}
         onWheel={handleWheel}
         onDragEnd={handleDragEnd}
+        presenceUsers={presenceUsers}
+        onCursorMove={updateCursorPosition}
       />
     </div>
   );

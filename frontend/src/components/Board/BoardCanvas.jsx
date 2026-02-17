@@ -4,8 +4,9 @@ import { useBoardObjects } from '../../hooks/useBoardObjects';
 import { useAuth } from '../../hooks/useAuth.jsx';
 import { createObject } from '../../services/board';
 import ObjectFactory from '../Objects/ObjectFactory';
+import MultipleCursors from '../Presence/MultipleCursors';
 
-export default function BoardCanvas({ stageScale, stagePosition, selectedTool, selectedColor, onWheel, onDragEnd }) {
+export default function BoardCanvas({ stageScale, stagePosition, selectedTool, selectedColor, onWheel, onDragEnd, presenceUsers, onCursorMove }) {
   const containerRef = useRef(null);
   const stageRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -61,10 +62,20 @@ export default function BoardCanvas({ stageScale, stagePosition, selectedTool, s
           user.uid
         );
       }
-      // Future tools will be handled here
     } catch (error) {
       console.error('Failed to create object:', error);
     }
+  };
+
+  // Track mouse position for multiplayer cursors
+  const handleMouseMove = (e) => {
+    if (!onCursorMove) return;
+    const stage = e.target.getStage();
+    if (!stage) return;
+    const pointerPos = stage.getPointerPosition();
+    const transform = stage.getAbsoluteTransform().copy().invert();
+    const canvasPos = transform.point(pointerPos);
+    onCursorMove(canvasPos.x, canvasPos.y);
   };
 
   return (
@@ -87,13 +98,15 @@ export default function BoardCanvas({ stageScale, stagePosition, selectedTool, s
           onDragEnd={onDragEnd}
           onClick={handleStageClick}
           onTap={handleStageClick}
+          onMouseMove={handleMouseMove}
         >
           <Layer>
-            {/* Render all board objects */}
             {objects.map((object) => (
               <ObjectFactory key={object.id} object={object} />
             ))}
           </Layer>
+
+          <MultipleCursors presenceUsers={presenceUsers} stageScale={stageScale} />
         </Stage>
       )}
 
