@@ -52,9 +52,16 @@ export function usePresence(user) {
     [user?.uid]
   );
 
+  // Call this before signing out so the delete runs while still authenticated
+  const leave = useCallback(() => {
+    if (!user) return Promise.resolve();
+    return leaveBoard(boardId, user.uid).catch(console.error);
+  }, [user?.uid]);
+
   return {
     presenceUsers,
     updateCursorPosition,
+    leave,
     myColor: user ? getCursorColor(user.uid) : '#3B82F6',
   };
 }

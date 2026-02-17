@@ -61,6 +61,33 @@ export default function BoardCanvas({ stageScale, stagePosition, selectedTool, s
           },
           user.uid
         );
+      } else if (selectedTool === 'RECTANGLE') {
+        await createObject(
+          {
+            type: 'rectangle',
+            x: canvasPos.x,
+            y: canvasPos.y,
+            width: 160,
+            height: 100,
+            color: selectedColor,
+            rotation: 0,
+            zIndex: objects.length,
+          },
+          user.uid
+        );
+      } else if (selectedTool === 'CIRCLE') {
+        await createObject(
+          {
+            type: 'circle',
+            x: canvasPos.x,
+            y: canvasPos.y,
+            radius: 60,
+            color: selectedColor,
+            rotation: 0,
+            zIndex: objects.length,
+          },
+          user.uid
+        );
       }
     } catch (error) {
       console.error('Failed to create object:', error);

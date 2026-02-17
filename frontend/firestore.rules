@@ -1,10 +1,15 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Temporary development rules - WILL BE SECURED IN PHASE 5
-    // For now, allow authenticated users to read/write everything
-    match /{document=**} {
+    // Board objects: any authenticated user can read/write (shared board)
+    match /boards/{boardId}/objects/{objectId} {
       allow read, write: if request.auth != null;
+    }
+
+    // Presence: any authenticated user can read; only own presence doc can be written
+    match /boards/{boardId}/presence/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

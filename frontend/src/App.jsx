@@ -22,7 +22,12 @@ function AppContent() {
     resetView,
   } = useCanvas();
 
-  const { presenceUsers, updateCursorPosition, myColor } = usePresence(user);
+  const { presenceUsers, updateCursorPosition, leave, myColor } = usePresence(user);
+
+  const handleSignOut = async () => {
+    await leave(); // remove presence doc while still authenticated
+    signOut();
+  };
 
   if (loading) {
     return (
@@ -47,7 +52,7 @@ function AppContent() {
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onResetView={resetView}
-        onSignOut={signOut}
+        onSignOut={handleSignOut}
         user={user}
       />
       <UserList
