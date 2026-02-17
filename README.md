@@ -8,19 +8,24 @@ CollabBoard is an infinite canvas whiteboard that enables multiple users to coll
 
 ## ✨ Features
 
-### Current (MVP Phase 1-3)
+### MVP (All Phases Complete)
 - ✅ **Authentication**: Google Sign-In and Email/Password authentication via Firebase Auth
 - ✅ **Infinite Canvas**: Pan and zoom capabilities using Konva.js
 - ✅ **Sticky Notes**: Create, edit, move, and delete collaborative sticky notes
+- ✅ **Shapes**: Rectangle and circle drawing tools with color selection
 - ✅ **Real-time Sync**: Sub-100ms synchronization between multiple users using Firestore
-- ✅ **Tool Selection**: Toolbar with multiple drawing tools
-- ✅ **Responsive UI**: Beautiful gradient design with Tailwind CSS
+- ✅ **Multiplayer Cursors**: See other users' cursors with color-coded name labels in real-time
+- ✅ **Presence Awareness**: Live "Online" user list showing who's currently on the board
+- ✅ **Tool Selection**: Toolbar with Select, Sticky Note, Rectangle, and Circle tools
+- ✅ **Color Picker**: 8-color palette for objects (Yellow, Pink, Blue, Green, Purple, Orange, Red, Gray)
+- ✅ **Responsive UI**: Clean design with Tailwind CSS, gradient login page
+- ✅ **Deployed**: Live at https://collabboard-487701.web.app
 
-### Planned (Phase 4-5)
-- ⏳ **Multiplayer Cursors**: See other users' cursors with name labels in real-time
-- ⏳ **Presence Awareness**: Live user list showing who's currently on the board
-- ⏳ **Shapes**: Rectangle and circle drawing tools
-- ⏳ **AI Integration**: Natural language commands for board manipulation (Post-MVP)
+### Post-MVP (Planned)
+- ⏳ **AI Integration**: Natural language commands for board manipulation
+- ⏳ **Connectors/Lines**: Draw lines between objects
+- ⏳ **Resize & Rotate**: Handles for transforming objects
+- ⏳ **Multi-select**: Select and move multiple objects at once
 
 ## 🛠 Tech Stack
 
@@ -50,21 +55,28 @@ collabboard_app/
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── Auth/
-│   │   │   │   ├── LoginPage.jsx         # Authentication UI
-│   │   │   │   └── AuthProvider.jsx      # Auth context provider
+│   │   │   │   └── LoginPage.jsx         # Authentication UI
 │   │   │   ├── Board/
-│   │   │   │   ├── BoardCanvas.jsx       # Main Konva Stage + pan/zoom
-│   │   │   │   └── BoardToolbar.jsx      # Tool selection UI
-│   │   │   └── Objects/
-│   │   │       ├── StickyNote.jsx        # Draggable sticky note component
-│   │   │       └── ObjectFactory.jsx     # Renders objects by type
+│   │   │   │   ├── BoardCanvas.jsx       # Main Konva Stage + pan/zoom + cursor tracking
+│   │   │   │   └── BoardToolbar.jsx      # Tool selection, zoom controls, user info
+│   │   │   ├── Objects/
+│   │   │   │   ├── StickyNote.jsx        # Draggable sticky note with text editing
+│   │   │   │   ├── Rectangle.jsx         # Draggable rectangle shape
+│   │   │   │   ├── Circle.jsx            # Draggable circle shape
+│   │   │   │   └── ObjectFactory.jsx     # Renders objects by type
+│   │   │   └── Presence/
+│   │   │       ├── Cursor.jsx            # Konva cursor dot + name label
+│   │   │       ├── MultipleCursors.jsx   # Renders all remote user cursors
+│   │   │       └── UserList.jsx          # Online users panel
 │   │   ├── hooks/
-│   │   │   ├── useAuth.jsx               # Authentication hook
-│   │   │   ├── useBoardObjects.js        # Real-time Firestore sync
-│   │   │   └── useCanvas.js              # Canvas state management
+│   │   │   ├── useAuth.jsx               # Authentication context + provider
+│   │   │   ├── useBoardObjects.js        # Real-time Firestore object sync
+│   │   │   ├── useCanvas.js              # Canvas state (zoom, pan, tool, color)
+│   │   │   └── usePresence.js            # Presence tracking + throttled cursor updates
 │   │   ├── services/
 │   │   │   ├── firebase.js               # Firebase initialization
-│   │   │   └── board.js                  # Firestore CRUD operations
+│   │   │   ├── board.js                  # Firestore CRUD for board objects
+│   │   │   └── presence.js               # Firestore presence operations + cursor colors
 │   │   ├── utils/
 │   │   │   └── colors.js                 # Color palette utilities
 │   │   ├── App.jsx                       # Main app component
@@ -156,14 +168,17 @@ collabboard_app/
 1. Start the dev server: `npm run dev`
 2. Open browser to `http://localhost:5173`
 3. Sign in with Google or Email/Password
-4. Start creating sticky notes on the canvas!
+4. Select a tool (Sticky Note, Rectangle, or Circle) and click the canvas to place objects
+5. Use Select tool to pan the canvas; scroll to zoom
 
 ### Testing Real-time Sync
 
 1. Open the app in 2+ browser windows
 2. Sign in with different accounts
-3. Create/move/edit sticky notes
-4. Verify changes sync instantly across all windows
+3. Verify the "Online" panel shows both users
+4. Move your mouse — the other window should show your cursor with your name
+5. Create/move/edit objects and verify changes sync instantly
+6. Sign out — verify the user disappears from the other window's Online panel
 
 ### Deployment
 
@@ -187,76 +202,83 @@ Live URL: `https://collabboard-487701.web.app`
   type: 'stickyNote' | 'rectangle' | 'circle',
   x: number,              // Canvas x position
   y: number,              // Canvas y position
-  width: number,
-  height: number,
+  width: number,          // For stickyNote and rectangle
+  height: number,         // For stickyNote and rectangle
+  radius: number,         // For circle
   text: string,           // For sticky notes
   color: string,          // Hex color code
   rotation: number,       // Degrees
   zIndex: number,
+  createdBy: string,      // User ID
   updatedBy: string,      // User ID
+  createdAt: timestamp,
   updatedAt: timestamp
 }
 ```
 
-**boards/{boardId}/presence/{userId}** (Planned - Phase 4)
+**boards/{boardId}/presence/{userId}**
 ```javascript
 {
   displayName: string,
   cursor: { x: number, y: number },
-  color: string,
+  color: string,          // Vivid cursor color (assigned by user ID hash)
   lastSeen: timestamp
 }
 ```
 
 ## 🔐 Security
 
-Current Firestore rules (development):
-- All authenticated users can read/write to any board
-- Presence updates restricted to own user document
-
-**TODO**: Implement production-ready security rules with proper board ownership and permissions.
+Firestore security rules:
+- **Board objects**: Any authenticated user can read/write (shared board model)
+- **Presence**: Any authenticated user can read; writes restricted to own user document only
+- Presence cleanup: `leaveBoard()` deletes the presence doc before sign-out to ensure clean removal
 
 ## 🐛 Known Issues & Limitations
 
 1. **Conflict Resolution**: Uses last-write-wins (Firestore default)
-   - Two users editing the same object simultaneously may overwrite each other
+   - Two users editing the same sticky note text simultaneously may overwrite each other
    - Acceptable for MVP, consider operational transformation for production
 
 2. **Performance**: No optimizations yet for large boards (100+ objects)
-   - Plan to implement Konva layer caching in Phase 5
+   - Consider Konva layer caching for production
 
 3. **Mobile Support**: Limited mobile optimization
    - Touch gestures for pan/zoom not yet implemented
+
+4. **Single Board**: All users share one board (`default-board`)
+   - Multi-board support planned for post-MVP
 
 ## 📈 Development Timeline
 
 ### Phase 1 (Hours 0-3) ✅ COMPLETE
 - Vite + React project initialization
-- Firebase Authentication implementation
-- Tailwind CSS configuration
+- Firebase Authentication (Google + Email/Password)
+- Tailwind CSS v3 configuration
 - Initial deployment to Firebase Hosting
 
 ### Phase 2 (Hours 3-6) ✅ COMPLETE
-- Infinite canvas with pan/zoom
-- Board toolbar with tool selection
-- Canvas state management
+- Infinite canvas with pan/zoom (Konva.js)
+- Board toolbar with tool selection and color picker
+- Canvas state management (useCanvas hook)
 
 ### Phase 3 (Hours 6-12) ✅ COMPLETE
-- Firestore CRUD operations
-- Real-time sync with `onSnapshot` listeners
-- Sticky note component with drag & edit
-- Multi-browser sync testing
+- Firestore CRUD operations (board.js)
+- Real-time sync with `onSnapshot` listeners (useBoardObjects hook)
+- Sticky note component with drag & double-click text editing
+- Multi-browser real-time sync verified
 
-### Phase 4 (Hours 12-18) ⏳ IN PROGRESS
-- Multiplayer cursor tracking
-- Presence awareness system
-- User list sidebar
+### Phase 4 (Hours 12-18) ✅ COMPLETE
+- Presence service (joinBoard, updateCursor, leaveBoard)
+- usePresence hook with throttled cursor updates (~15/sec)
+- Multiplayer cursors (Konva dot + name label, counter-scaled for zoom)
+- UserList panel showing online users with colored indicators
+- Clean sign-out flow (presence deleted before auth sign-out)
 
-### Phase 5 (Hours 18-24) ⏳ PENDING
-- Rectangle and Circle shapes
-- Firestore security rules hardening
-- UI polish and performance optimization
-- Final deployment and MVP verification
+### Phase 5 (Hours 18-24) ✅ COMPLETE
+- Rectangle and Circle shape components
+- Object creation for all 3 tool types via canvas click
+- Firestore security rules hardened (presence write restricted to own doc)
+- Production build and final deployment
 
 ## 🔮 Post-MVP Roadmap
 
@@ -293,7 +315,7 @@ Current Firestore rules (development):
 - **Estimated monthly cost**: $0 (within free tier)
 
 **Scaling Concerns**
-- Cursor updates throttled to 10-15/second to control Firestore write costs
+- Cursor updates throttled to ~15/second to control Firestore write costs
 - Monitor Firebase console for usage spikes
 - Consider upgrading to Blaze plan for production
 
@@ -307,7 +329,7 @@ TBD
 
 ## 🙏 Acknowledgments
 
-- Built with Claude Code (Sonnet 4.5)
+- Built with Claude Code (Opus 4.6)
 - Firebase for backend infrastructure
 - Konva.js for canvas rendering
 - Tailwind CSS for styling
@@ -318,7 +340,7 @@ Pavel - [Your contact info]
 
 ---
 
-**Project Status**: 🟢 Active Development (Phase 3 Complete, Phase 4 In Progress)
+**Project Status**: ✅ MVP Complete (All 9 requirements met)
 
 **Last Updated**: February 16, 2026
 
