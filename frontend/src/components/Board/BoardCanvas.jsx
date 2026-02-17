@@ -1,26 +1,17 @@
 import { useRef, useEffect, useState } from 'react';
 import { Stage, Layer } from 'react-konva';
-import { useCanvas } from '../../hooks/useCanvas';
 import { useBoardObjects } from '../../hooks/useBoardObjects';
 import { useAuth } from '../../hooks/useAuth.jsx';
 import { createObject } from '../../services/board';
 import ObjectFactory from '../Objects/ObjectFactory';
 
-export default function BoardCanvas() {
+export default function BoardCanvas({ stageScale, stagePosition, selectedTool, selectedColor, onWheel, onDragEnd }) {
   const containerRef = useRef(null);
   const stageRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   const { user } = useAuth();
   const { objects, loading } = useBoardObjects();
-  const {
-    stageScale,
-    stagePosition,
-    selectedTool,
-    selectedColor,
-    handleWheel,
-    handleDragEnd,
-  } = useCanvas();
 
   // Handle window resize
   useEffect(() => {
@@ -92,8 +83,8 @@ export default function BoardCanvas() {
           scaleY={stageScale}
           x={stagePosition.x}
           y={stagePosition.y}
-          onWheel={handleWheel}
-          onDragEnd={handleDragEnd}
+          onWheel={onWheel}
+          onDragEnd={onDragEnd}
           onClick={handleStageClick}
           onTap={handleStageClick}
         >
@@ -112,13 +103,6 @@ export default function BoardCanvas() {
           <span className="text-sm text-gray-600">Loading board...</span>
         </div>
       )}
-
-      {/* Zoom indicator */}
-      <div className="fixed bottom-4 right-4 bg-white px-3 py-2 rounded-lg shadow-lg border border-gray-200">
-        <span className="text-sm text-gray-600">
-          Zoom: {Math.round(stageScale * 100)}%
-        </span>
-      </div>
 
       {/* Object count */}
       <div className="fixed bottom-4 left-4 bg-white px-3 py-2 rounded-lg shadow-lg border border-gray-200">

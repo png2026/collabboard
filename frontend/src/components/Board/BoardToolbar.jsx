@@ -10,6 +10,7 @@ const TOOLS = [
 export default function BoardToolbar({
   selectedTool,
   selectedColor,
+  stageScale,
   onToolChange,
   onColorChange,
   onZoomIn,
@@ -77,10 +78,10 @@ export default function BoardToolbar({
             </button>
             <button
               onClick={onResetView}
-              className="px-3 py-1 text-gray-700 hover:bg-white rounded-md transition-colors text-sm"
-              title="Reset View"
+              className="px-3 py-1 text-gray-700 hover:bg-white rounded-md transition-colors text-sm min-w-[52px]"
+              title="Reset View (click to reset)"
             >
-              100%
+              {Math.round((stageScale ?? 1) * 100)}%
             </button>
             <button
               onClick={onZoomIn}

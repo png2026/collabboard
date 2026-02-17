@@ -7,10 +7,14 @@ import BoardToolbar from './components/Board/BoardToolbar';
 function AppContent() {
   const { user, loading, signOut } = useAuth();
   const {
+    stageScale,
+    stagePosition,
     selectedTool,
     selectedColor,
     setSelectedTool,
     setSelectedColor,
+    handleWheel,
+    handleDragEnd,
     zoomIn,
     zoomOut,
     resetView,
@@ -33,6 +37,7 @@ function AppContent() {
       <BoardToolbar
         selectedTool={selectedTool}
         selectedColor={selectedColor}
+        stageScale={stageScale}
         onToolChange={setSelectedTool}
         onColorChange={setSelectedColor}
         onZoomIn={zoomIn}
@@ -41,7 +46,14 @@ function AppContent() {
         onSignOut={signOut}
         user={user}
       />
-      <BoardCanvas />
+      <BoardCanvas
+        stageScale={stageScale}
+        stagePosition={stagePosition}
+        selectedTool={selectedTool}
+        selectedColor={selectedColor}
+        onWheel={handleWheel}
+        onDragEnd={handleDragEnd}
+      />
     </div>
   );
 }
