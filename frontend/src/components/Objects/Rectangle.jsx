@@ -1,8 +1,9 @@
+import { memo } from 'react';
 import { Group, Rect } from 'react-konva';
 import { updateObject } from '../../services/board';
-import { useAuth } from '../../hooks/useAuth.jsx';
+import { useAuth } from '../../hooks/useAuth.js';
 
-export default function Rectangle({ object }) {
+export default memo(function Rectangle({ object, isSelected, onSelect }) {
   const { user } = useAuth();
 
   const handleDragEnd = async (e) => {
@@ -19,13 +20,15 @@ export default function Rectangle({ object }) {
       y={object.y}
       draggable
       onDragEnd={handleDragEnd}
+      onClick={() => onSelect(object.id)}
+      onTap={() => onSelect(object.id)}
     >
       <Rect
-        width={object.width || 160}
-        height={object.height || 100}
-        fill={object.color || '#BFDBFE'}
-        stroke="#93C5FD"
-        strokeWidth={2}
+        width={object.width || 120}
+        height={object.height || 120}
+        fill={object.color || '#E5E7EB'}
+        stroke={isSelected ? '#3B82F6' : '#9CA3AF'}
+        strokeWidth={isSelected ? 3 : 2}
         shadowColor="black"
         shadowBlur={4}
         shadowOpacity={0.15}
@@ -35,4 +38,4 @@ export default function Rectangle({ object }) {
       />
     </Group>
   );
-}
+});

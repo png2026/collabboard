@@ -1,18 +1,19 @@
 import { useRef, useEffect, useState } from 'react';
 import { Stage, Layer } from 'react-konva';
 import { useBoardObjects } from '../../hooks/useBoardObjects';
-import { useAuth } from '../../hooks/useAuth.jsx';
-import { createObject } from '../../services/board';
+import { useAuth } from '../../hooks/useAuth.js';
+import { createObject, deleteObject } from '../../services/board';
+import { TYPE_DEFAULT_COLORS } from '../../utils/colors';
 import ObjectFactory from '../Objects/ObjectFactory';
 import MultipleCursors from '../Presence/MultipleCursors';
 
-export default function BoardCanvas({ stageScale, stagePosition, selectedTool, selectedColor, onWheel, onDragEnd, presenceUsers, onCursorMove }) {
+export default function BoardCanvas({ stageScale, stagePosition, selectedTool, selectedColor, onWheel, onDragEnd, presenceUsers, onCursorMove, selectedObjectId, onSelectObject }) {
   const containerRef = useRef(null);
   const stageRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   const { user } = useAuth();
-  const { objects, loading } = useBoardObjects();
+  const { objects, loading, error } = useBoardObjects();
 
   // Handle window resize
   useEffect(() => {
@@ -30,8 +31,30 @@ export default function BoardCanvas({ stageScale, stagePosition, selectedTool, s
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
+  // Delete selected object with Delete/Backspace key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObjectId) {
+        // Don't delete if user is typing in an input/textarea
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        e.preventDefault();
+        deleteObject(selectedObjectId).catch(console.error);
+        onSelectObject(null);
+      } else if (e.key === 'Escape') {
+        onSelectObject(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedObjectId, onSelectObject]);
+
   // Handle stage click to create objects
   const handleStageClick = async (e) => {
+    // Deselect when clicking empty canvas
+    if (e.target === e.target.getStage()) {
+      onSelectObject(null);
+    }
+
     // Only create objects if a tool is selected (not SELECT)
     if (selectedTool === 'SELECT') return;
 
@@ -55,7 +78,7 @@ export default function BoardCanvas({ stageScale, stagePosition, selectedTool, s
             width: 200,
             height: 150,
             text: '',
-            color: selectedColor,
+            color: selectedColor ?? TYPE_DEFAULT_COLORS.stickyNote,
             rotation: 0,
             zIndex: objects.length,
           },
@@ -67,9 +90,9 @@ export default function BoardCanvas({ stageScale, stagePosition, selectedTool, s
             type: 'rectangle',
             x: canvasPos.x,
             y: canvasPos.y,
-            width: 160,
-            height: 100,
-            color: selectedColor,
+            width: 120,
+            height: 120,
+            color: selectedColor ?? TYPE_DEFAULT_COLORS.rectangle,
             rotation: 0,
             zIndex: objects.length,
           },
@@ -82,7 +105,7 @@ export default function BoardCanvas({ stageScale, stagePosition, selectedTool, s
             x: canvasPos.x,
             y: canvasPos.y,
             radius: 60,
-            color: selectedColor,
+            color: selectedColor ?? TYPE_DEFAULT_COLORS.circle,
             rotation: 0,
             zIndex: objects.length,
           },
@@ -129,7 +152,12 @@ export default function BoardCanvas({ stageScale, stagePosition, selectedTool, s
         >
           <Layer>
             {objects.map((object) => (
-              <ObjectFactory key={object.id} object={object} />
+              <ObjectFactory
+                key={object.id}
+                object={object}
+                isSelected={selectedObjectId === object.id}
+                onSelect={onSelectObject}
+              />
             ))}
           </Layer>
 
@@ -137,10 +165,15 @@ export default function BoardCanvas({ stageScale, stagePosition, selectedTool, s
         </Stage>
       )}
 
-      {/* Loading indicator */}
       {loading && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-white px-4 py-2 rounded-lg shadow-lg border border-gray-200">
           <span className="text-sm text-gray-600">Loading board...</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-50 px-4 py-2 rounded-lg shadow-lg border border-red-200">
+          <span className="text-sm text-red-600">Failed to load board. Check your connection.</span>
         </div>
       )}
 

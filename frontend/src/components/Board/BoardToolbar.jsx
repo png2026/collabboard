@@ -1,10 +1,17 @@
 import { COLORS } from '../../utils/colors';
 
+const TOOL_ICON = {
+  SELECT: <span style={{ fontSize: 16, lineHeight: 1 }}>↖</span>,
+  STICKY_NOTE: <span style={{ display: 'inline-block', width: 18, height: 18, backgroundColor: '#FDE68A', border: '1.5px solid #D1D5DB', borderRadius: 2 }} />,
+  RECTANGLE: <span style={{ display: 'inline-block', width: 18, height: 18, backgroundColor: '#E5E7EB', border: '1.5px solid #9CA3AF', borderRadius: 2 }} />,
+  CIRCLE: <span style={{ display: 'inline-block', width: 18, height: 18, backgroundColor: '#E5E7EB', border: '1.5px solid #9CA3AF', borderRadius: '50%' }} />,
+};
+
 const TOOLS = [
-  { id: 'SELECT', icon: '↖️', label: 'Select' },
-  { id: 'STICKY_NOTE', icon: '📝', label: 'Sticky Note' },
-  { id: 'RECTANGLE', icon: '⬜', label: 'Rectangle' },
-  { id: 'CIRCLE', icon: '⭕', label: 'Circle' },
+  { id: 'SELECT', label: 'Select' },
+  { id: 'STICKY_NOTE', label: 'Sticky Note' },
+  { id: 'RECTANGLE', label: 'Rectangle' },
+  { id: 'CIRCLE', label: 'Circle' },
 ];
 
 export default function BoardToolbar({
@@ -18,7 +25,9 @@ export default function BoardToolbar({
   onResetView,
   onSignOut,
   user,
+  hasSelection,
 }) {
+  const showColorPicker = selectedTool !== 'SELECT' || hasSelection;
   return (
     <div className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 shadow-sm z-50">
       <div className="flex items-center justify-between px-4 py-2">
@@ -39,30 +48,32 @@ export default function BoardToolbar({
                 }`}
                 title={tool.label}
               >
-                <span className="text-lg">{tool.icon}</span>
+                {TOOL_ICON[tool.id]}
               </button>
             ))}
           </div>
 
-          {/* Color Picker */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">Color:</span>
-            <div className="flex gap-1">
-              {COLORS.map((color) => (
-                <button
-                  key={color.value}
-                  onClick={() => onColorChange(color.value)}
-                  className={`w-8 h-8 rounded-md border-2 transition-all ${
-                    selectedColor === color.value
-                      ? 'border-gray-900 scale-110'
-                      : 'border-gray-300 hover:scale-105'
-                  }`}
-                  style={{ backgroundColor: color.value }}
-                  title={color.name}
-                />
-              ))}
+          {/* Color Picker - only shown for creation tools */}
+          {showColorPicker && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Color:</span>
+              <div className="flex gap-1">
+                {COLORS.map((color) => (
+                  <button
+                    key={color.value}
+                    onClick={() => onColorChange(color.value)}
+                    className={`w-8 h-8 rounded-md border-2 transition-all ${
+                      selectedColor === color.value
+                        ? 'border-gray-900 scale-110'
+                        : 'border-gray-300 hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: color.value }}
+                    title={color.name}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Right: Zoom Controls and User */}

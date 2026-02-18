@@ -14,10 +14,8 @@ export function usePresence(user) {
   useEffect(() => {
     if (!user) return;
 
-    // Register presence on mount
     joinBoard(boardId, user).catch(console.error);
 
-    // Listen to all users' presence
     const presenceRef = collection(db, `boards/${boardId}/presence`);
     const unsubscribe = onSnapshot(presenceRef, (snapshot) => {
       const users = [];
@@ -29,7 +27,6 @@ export function usePresence(user) {
       setPresenceUsers(users);
     });
 
-    // Clean up: remove presence and listener on unmount
     const handleUnload = () => leaveBoard(boardId, user.uid);
     window.addEventListener('beforeunload', handleUnload);
 
@@ -38,9 +35,8 @@ export function usePresence(user) {
       window.removeEventListener('beforeunload', handleUnload);
       leaveBoard(boardId, user.uid).catch(console.error);
     };
-  }, [user?.uid]);
+  }, [boardId, user]);
 
-  // Throttled cursor update — call this from mousemove
   const updateCursorPosition = useCallback(
     (x, y) => {
       if (!user) return;
@@ -49,14 +45,13 @@ export function usePresence(user) {
       lastUpdateRef.current = now;
       updateCursor(boardId, user.uid, x, y).catch(console.error);
     },
-    [user?.uid]
+    [boardId, user]
   );
 
-  // Call this before signing out so the delete runs while still authenticated
   const leave = useCallback(() => {
     if (!user) return Promise.resolve();
     return leaveBoard(boardId, user.uid).catch(console.error);
-  }, [user?.uid]);
+  }, [boardId, user]);
 
   return {
     presenceUsers,

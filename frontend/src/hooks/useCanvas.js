@@ -1,10 +1,14 @@
 import { useState, useCallback } from 'react';
 
+const ZOOM_FACTOR = 1.15;
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 5;
+
 export function useCanvas() {
   const [stageScale, setStageScale] = useState(1);
   const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
   const [selectedTool, setSelectedTool] = useState('SELECT');
-  const [selectedColor, setSelectedColor] = useState('#FDE68A'); // Default yellow
+  const [selectedColor, setSelectedColor] = useState(null);
 
   const handleWheel = useCallback((e) => {
     e.evt.preventDefault();
@@ -13,20 +17,14 @@ export function useCanvas() {
     const oldScale = stage.scaleX();
     const pointer = stage.getPointerPosition();
 
-    // Calculate mouse position relative to stage
     const mousePointTo = {
       x: (pointer.x - stage.x()) / oldScale,
       y: (pointer.y - stage.y()) / oldScale,
     };
 
-    // Zoom scale factor
-    const scaleBy = 1.1;
-    const newScale = e.evt.deltaY < 0 ? oldScale * scaleBy : oldScale / scaleBy;
+    const newScale = e.evt.deltaY < 0 ? oldScale * ZOOM_FACTOR : oldScale / ZOOM_FACTOR;
+    const constrainedScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newScale));
 
-    // Constrain zoom levels
-    const constrainedScale = Math.max(0.1, Math.min(5, newScale));
-
-    // Calculate new position to zoom toward mouse
     const newPos = {
       x: pointer.x - mousePointTo.x * constrainedScale,
       y: pointer.y - mousePointTo.y * constrainedScale,
@@ -49,11 +47,11 @@ export function useCanvas() {
   }, []);
 
   const zoomIn = useCallback(() => {
-    setStageScale((scale) => Math.min(5, scale * 1.2));
+    setStageScale((scale) => Math.min(MAX_ZOOM, scale * ZOOM_FACTOR));
   }, []);
 
   const zoomOut = useCallback(() => {
-    setStageScale((scale) => Math.max(0.1, scale / 1.2));
+    setStageScale((scale) => Math.max(MIN_ZOOM, scale / ZOOM_FACTOR));
   }, []);
 
   return {

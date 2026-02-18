@@ -33,6 +33,8 @@ export function useBoardObjects() {
         setLoading(false);
       },
       (err) => {
+        // permission-denied is expected during sign-out (auth token invalidated before listener cleanup)
+        if (err.code === 'permission-denied') return;
         console.error('Error in board objects listener:', err);
         setError(err);
         setLoading(false);

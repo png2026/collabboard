@@ -1,6 +1,10 @@
-import { AuthProvider, useAuth } from './hooks/useAuth.jsx';
+import { useState, useCallback } from 'react';
+import { AuthProvider } from './hooks/useAuth.jsx';
+import { useAuth } from './hooks/useAuth.js';
 import { useCanvas } from './hooks/useCanvas';
 import { usePresence } from './hooks/usePresence';
+import { updateObject } from './services/board';
+import ErrorBoundary from './components/ErrorBoundary';
 import LoginPage from './components/Auth/LoginPage';
 import BoardCanvas from './components/Board/BoardCanvas';
 import BoardToolbar from './components/Board/BoardToolbar';
@@ -23,6 +27,14 @@ function AppContent() {
   } = useCanvas();
 
   const { presenceUsers, updateCursorPosition, leave, myColor } = usePresence(user);
+  const [selectedObjectId, setSelectedObjectId] = useState(null);
+
+  const handleColorChange = useCallback((color) => {
+    setSelectedColor(color);
+    if (selectedObjectId && user) {
+      updateObject(selectedObjectId, { color }, user.uid).catch(console.error);
+    }
+  }, [selectedObjectId, user, setSelectedColor]);
 
   const handleSignOut = async () => {
     await leave(); // remove presence doc while still authenticated
@@ -48,7 +60,8 @@ function AppContent() {
         selectedColor={selectedColor}
         stageScale={stageScale}
         onToolChange={setSelectedTool}
-        onColorChange={setSelectedColor}
+        onColorChange={handleColorChange}
+        hasSelection={!!selectedObjectId}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onResetView={resetView}
@@ -69,6 +82,8 @@ function AppContent() {
         onDragEnd={handleDragEnd}
         presenceUsers={presenceUsers}
         onCursorMove={updateCursorPosition}
+        selectedObjectId={selectedObjectId}
+        onSelectObject={setSelectedObjectId}
       />
     </div>
   );
@@ -76,9 +91,11 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

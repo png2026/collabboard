@@ -12,12 +12,13 @@ CollabBoard is an infinite canvas whiteboard that enables multiple users to coll
 - ✅ **Authentication**: Google Sign-In and Email/Password authentication via Firebase Auth
 - ✅ **Infinite Canvas**: Pan and zoom capabilities using Konva.js
 - ✅ **Sticky Notes**: Create, edit, move, and delete collaborative sticky notes
-- ✅ **Shapes**: Rectangle and circle drawing tools with color selection
+- ✅ **Shapes**: Square and circle drawing tools (grey by default, recolorable)
 - ✅ **Real-time Sync**: Sub-100ms synchronization between multiple users using Firestore
 - ✅ **Multiplayer Cursors**: See other users' cursors with color-coded name labels in real-time
 - ✅ **Presence Awareness**: Live "Online" user list showing who's currently on the board
 - ✅ **Tool Selection**: Toolbar with Select, Sticky Note, Rectangle, and Circle tools
-- ✅ **Color Picker**: 8-color palette for objects (Yellow, Pink, Blue, Green, Purple, Orange, Red, Gray)
+- ✅ **Color Picker**: 8-color palette; per-type defaults (yellow for sticky notes, grey for shapes); recolor selected objects
+- ✅ **Selection & Delete**: Click to select (blue highlight), Delete/Backspace to remove, Escape to deselect
 - ✅ **Responsive UI**: Clean design with Tailwind CSS, gradient login page
 - ✅ **Deployed**: Live at https://collabboard-487701.web.app
 
@@ -64,24 +65,30 @@ collabboard_app/
 │   │   │   │   ├── Rectangle.jsx         # Draggable rectangle shape
 │   │   │   │   ├── Circle.jsx            # Draggable circle shape
 │   │   │   │   └── ObjectFactory.jsx     # Renders objects by type
-│   │   │   └── Presence/
-│   │   │       ├── Cursor.jsx            # Konva cursor dot + name label
-│   │   │       ├── MultipleCursors.jsx   # Renders all remote user cursors
-│   │   │       └── UserList.jsx          # Online users panel
+│   │   │   ├── Presence/
+│   │   │   │   ├── Cursor.jsx            # Konva cursor dot + name label
+│   │   │   │   ├── MultipleCursors.jsx   # Renders all remote user cursors
+│   │   │   │   └── UserList.jsx          # Online users panel
+│   │   │   └── ErrorBoundary.jsx         # Crash recovery with reload button
 │   │   ├── hooks/
-│   │   │   ├── useAuth.jsx               # Authentication context + provider
-│   │   │   ├── useBoardObjects.js        # Real-time Firestore object sync
-│   │   │   ├── useCanvas.js              # Canvas state (zoom, pan, tool, color)
-│   │   │   └── usePresence.js            # Presence tracking + throttled cursor updates
+│   │   │   ├── AuthContext.js            # Shared auth context
+│   │   │   ├── useAuth.js               # useAuth hook (pure hook, no components)
+│   │   │   ├── useAuth.jsx              # AuthProvider component
+│   │   │   ├── useBoardObjects.js       # Real-time Firestore object sync
+│   │   │   ├── useCanvas.js             # Canvas state (zoom, pan, tool, color)
+│   │   │   └── usePresence.js           # Presence tracking + throttled cursor updates
 │   │   ├── services/
 │   │   │   ├── firebase.js               # Firebase initialization
 │   │   │   ├── board.js                  # Firestore CRUD for board objects
 │   │   │   └── presence.js               # Firestore presence operations + cursor colors
 │   │   ├── utils/
 │   │   │   └── colors.js                 # Color palette utilities
+│   │   ├── test/
+│   │   │   └── setup.js                  # Vitest setup (jest-dom)
 │   │   ├── App.jsx                       # Main app component
 │   │   ├── main.jsx                      # App entry point
 │   │   └── index.css                     # Global styles + Tailwind
+│   ├── .env.example                      # Firebase config template
 │   ├── firestore.rules                   # Firestore security rules
 │   ├── firebase.json                     # Firebase config
 │   ├── tailwind.config.js                # Tailwind configuration
@@ -117,25 +124,17 @@ collabboard_app/
 
 3. **Configure Firebase**
 
-   Create `frontend/src/services/firebase.js` with your Firebase config:
-   ```javascript
-   import { initializeApp } from 'firebase/app';
-   import { getAuth } from 'firebase/auth';
-   import { getFirestore } from 'firebase/firestore';
-
-   const firebaseConfig = {
-     apiKey: "your-api-key",
-     authDomain: "your-auth-domain",
-     projectId: "your-project-id",
-     storageBucket: "your-storage-bucket",
-     messagingSenderId: "your-sender-id",
-     appId: "your-app-id"
-   };
-
-   const app = initializeApp(firebaseConfig);
-   export const auth = getAuth(app);
-   export const db = getFirestore(app);
+   Create a `frontend/.env` file with your Firebase project credentials:
+   ```env
+   VITE_FIREBASE_API_KEY=your-api-key
+   VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+   VITE_FIREBASE_PROJECT_ID=your-project-id
+   VITE_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+   VITE_FIREBASE_APP_ID=your-app-id
    ```
+
+   The app reads these via `import.meta.env` in `frontend/src/services/firebase.js`.
 
 4. **Start development server**
    ```bash
@@ -171,14 +170,47 @@ collabboard_app/
 4. Select a tool (Sticky Note, Rectangle, or Circle) and click the canvas to place objects
 5. Use Select tool to pan the canvas; scroll to zoom
 
-### Testing Real-time Sync
+### Manual Test Plan
 
-1. Open the app in 2+ browser windows
-2. Sign in with different accounts
-3. Verify the "Online" panel shows both users
-4. Move your mouse — the other window should show your cursor with your name
-5. Create/move/edit objects and verify changes sync instantly
-6. Sign out — verify the user disappears from the other window's Online panel
+#### 1. Authentication
+- [ ] Page title says "CollabBoard"
+- [ ] Sign in with Google (popup opens, signs in)
+- [ ] Sign in with Email/Password (register first if needed)
+- [ ] After login, you land on the board with toolbar visible
+
+#### 2. Tools & Objects
+- [ ] Select **Sticky Note** tool → click canvas → yellow note appears (default color)
+- [ ] Double-click the note → type text → click away → text saved
+- [ ] Pick a color from palette → create another sticky note → it uses the picked color
+- [ ] Select **Rectangle** tool → click canvas → grey square appears (default color)
+- [ ] Select **Circle** tool → click canvas → grey circle appears (default color)
+- [ ] Select an object → pick a color → object changes to that color
+
+#### 3. Move & Delete
+- [ ] Switch to **Select** tool → drag any object → it moves smoothly
+- [ ] Click an object → blue selection highlight appears
+- [ ] Press **Delete** or **Backspace** → object disappears
+- [ ] Press **Escape** → selection clears
+
+#### 4. Pan & Zoom
+- [ ] With Select tool, drag empty canvas → board pans
+- [ ] Scroll wheel → board zooms in/out
+- [ ] Toolbar zoom % updates as you zoom
+- [ ] Click the **zoom %** button → zoom returns to 100%, position resets
+
+#### 5. Real-time Sync (requires 2 browser windows)
+- [ ] Open app in 2 windows, sign in with different accounts
+- [ ] **Online panel**: both users appear with colored dots
+- [ ] **Cursors**: move mouse in Window A → cursor with name label appears in Window B
+- [ ] **Create sync**: create object in A → appears in B instantly (<100ms)
+- [ ] **Move sync**: drag object in A → moves in B
+- [ ] **Edit sync**: edit sticky note text in A → updates in B
+- [ ] **Delete sync**: select + Delete key in A → disappears from B
+- [ ] **Sign-out cleanup**: sign out in A → user disappears from B's Online panel
+
+#### 6. Error Handling
+- [ ] No console errors during normal usage
+- [ ] App doesn't crash — if it does, ErrorBoundary shows reload button
 
 ### Deployment
 
@@ -191,6 +223,33 @@ firebase deploy --only hosting
 ```
 
 Live URL: `https://collabboard-487701.web.app`
+
+## 🧹 Factory Reset (Clean State for Testing)
+
+To wipe all board data and start fresh, use the Firebase CLI to delete the Firestore collections:
+
+```bash
+# Make sure you're authenticated
+firebase login
+
+# Delete all board objects (sticky notes, rectangles, circles)
+firebase firestore:delete --project collabboard-487701 -r boards/default-board/objects --force
+
+# Delete all presence data (cursors, online users)
+firebase firestore:delete --project collabboard-487701 -r boards/default-board/presence --force
+```
+
+Then start the dev server:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` — the board will be completely empty.
+
+> **Note**: If your Firebase credentials have expired, run `firebase login --reauth` first.
 
 ## 📊 Data Model
 
@@ -336,12 +395,12 @@ TBD
 
 ## 📧 Contact
 
-Pavel - [Your contact info]
+Paul - [Your contact info]
 
 ---
 
 **Project Status**: ✅ MVP Complete (All 9 requirements met)
 
-**Last Updated**: February 16, 2026
+**Last Updated**: February 17, 2026
 
 **Live Demo**: https://collabboard-487701.web.app

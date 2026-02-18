@@ -11,6 +11,12 @@ export const COLORS = [
 
 export const DEFAULT_COLOR = COLORS[0].value; // Yellow
 
+export const TYPE_DEFAULT_COLORS = {
+  stickyNote: '#FDE68A', // Yellow
+  rectangle: '#E5E7EB',  // Gray
+  circle: '#E5E7EB',     // Gray
+};
+
 export function getRandomColor() {
   return COLORS[Math.floor(Math.random() * COLORS.length)].value;
 }

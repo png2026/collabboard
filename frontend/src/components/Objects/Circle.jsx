@@ -1,8 +1,9 @@
+import { memo } from 'react';
 import { Group, Circle as KonvaCircle } from 'react-konva';
 import { updateObject } from '../../services/board';
-import { useAuth } from '../../hooks/useAuth.jsx';
+import { useAuth } from '../../hooks/useAuth.js';
 
-export default function Circle({ object }) {
+export default memo(function Circle({ object, isSelected, onSelect }) {
   const { user } = useAuth();
 
   const handleDragEnd = async (e) => {
@@ -21,12 +22,14 @@ export default function Circle({ object }) {
       y={object.y}
       draggable
       onDragEnd={handleDragEnd}
+      onClick={() => onSelect(object.id)}
+      onTap={() => onSelect(object.id)}
     >
       <KonvaCircle
         radius={radius}
-        fill={object.color || '#BBF7D0'}
-        stroke="#86EFAC"
-        strokeWidth={2}
+        fill={object.color || '#E5E7EB'}
+        stroke={isSelected ? '#3B82F6' : '#9CA3AF'}
+        strokeWidth={isSelected ? 3 : 2}
         shadowColor="black"
         shadowBlur={4}
         shadowOpacity={0.15}
@@ -35,4 +38,4 @@ export default function Circle({ object }) {
       />
     </Group>
   );
-}
+});

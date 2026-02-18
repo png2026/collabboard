@@ -1,44 +1,55 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { Group, Rect, Text } from 'react-konva';
 import { updateObject } from '../../services/board';
-import { useAuth } from '../../hooks/useAuth.jsx';
+import { useAuth } from '../../hooks/useAuth.js';
 
 const STICKY_NOTE_WIDTH = 200;
 const STICKY_NOTE_HEIGHT = 150;
 const PADDING = 10;
 
-export default function StickyNote({ object }) {
+export default memo(function StickyNote({ object, isSelected, onSelect }) {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const groupRef = useRef();
+  const textareaRef = useRef(null);
+
+  // Clean up textarea on unmount
+  useEffect(() => {
+    return () => {
+      if (textareaRef.current && document.body.contains(textareaRef.current)) {
+        document.body.removeChild(textareaRef.current);
+      }
+    };
+  }, []);
 
   const handleDragEnd = async (e) => {
-    const newPos = {
-      x: e.target.x(),
-      y: e.target.y(),
-    };
-
     try {
-      await updateObject(object.id, newPos, user.uid);
+      await updateObject(object.id, { x: e.target.x(), y: e.target.y() }, user.uid);
     } catch (error) {
       console.error('Failed to update position:', error);
     }
   };
 
+  const removeTextarea = () => {
+    if (textareaRef.current && document.body.contains(textareaRef.current)) {
+      document.body.removeChild(textareaRef.current);
+      textareaRef.current = null;
+    }
+    setIsEditing(false);
+  };
+
   const handleDoubleClick = () => {
     setIsEditing(true);
 
-    // Get the absolute position of the sticky note on screen
     const stage = groupRef.current.getStage();
     const group = groupRef.current;
     const transform = group.getAbsoluteTransform();
     const absPos = transform.point({ x: 0, y: 0 });
 
-    // Create textarea overlay
     const textarea = document.createElement('textarea');
+    textareaRef.current = textarea;
     document.body.appendChild(textarea);
 
-    // Position and style textarea
     textarea.value = object.text || '';
     textarea.style.position = 'absolute';
     textarea.style.top = absPos.y + PADDING + 'px';
@@ -63,7 +74,6 @@ export default function StickyNote({ object }) {
     textarea.focus();
     textarea.select();
 
-    // Handle save on blur or Enter
     const handleSave = async () => {
       const newText = textarea.value;
       if (newText !== object.text) {
@@ -73,19 +83,14 @@ export default function StickyNote({ object }) {
           console.error('Failed to update text:', error);
         }
       }
-
-      document.body.removeChild(textarea);
-      setIsEditing(false);
+      removeTextarea();
     };
 
     textarea.addEventListener('blur', handleSave);
     textarea.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        document.body.removeChild(textarea);
-        setIsEditing(false);
+        removeTextarea();
       }
-      // Don't save on Enter since we want multi-line text
-      // User must click outside or press Escape
     });
   };
 
@@ -96,16 +101,17 @@ export default function StickyNote({ object }) {
       y={object.y}
       draggable
       onDragEnd={handleDragEnd}
+      onClick={() => onSelect(object.id)}
+      onTap={() => onSelect(object.id)}
       onDblClick={handleDoubleClick}
       onDblTap={handleDoubleClick}
     >
-      {/* Sticky note background */}
       <Rect
         width={STICKY_NOTE_WIDTH}
         height={STICKY_NOTE_HEIGHT}
         fill={object.color || '#FDE68A'}
-        stroke="#D1D5DB"
-        strokeWidth={1}
+        stroke={isSelected ? '#3B82F6' : '#D1D5DB'}
+        strokeWidth={isSelected ? 2 : 1}
         shadowColor="black"
         shadowBlur={5}
         shadowOpacity={0.2}
@@ -113,8 +119,6 @@ export default function StickyNote({ object }) {
         shadowOffsetY={2}
         cornerRadius={4}
       />
-
-      {/* Text content */}
       {!isEditing && (
         <Text
           text={object.text || 'Double-click to edit'}
@@ -133,4 +137,4 @@ export default function StickyNote({ object }) {
       )}
     </Group>
   );
-}
+});
