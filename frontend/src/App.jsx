@@ -1,9 +1,11 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { AuthProvider } from './hooks/useAuth.jsx';
 import { useAuth } from './hooks/useAuth.js';
 import { useCanvas } from './hooks/useCanvas';
 import { usePresence } from './hooks/usePresence';
-import { updateObject } from './services/board';
+import { useSelection } from './hooks/useSelection';
+import { useNetworkStatus } from './hooks/useNetworkStatus';
+import { updateObject, updateMultipleObjects } from './services/board';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoginPage from './components/Auth/LoginPage';
 import BoardCanvas from './components/Board/BoardCanvas';
@@ -27,17 +29,24 @@ function AppContent() {
   } = useCanvas();
 
   const { presenceUsers, updateCursorPosition, leave, myColor } = usePresence(user);
-  const [selectedObjectId, setSelectedObjectId] = useState(null);
+  const { selectedObjectIds, selectObject, selectMultiple, clearSelection } = useSelection();
+  const isOnline = useNetworkStatus();
 
   const handleColorChange = useCallback((color) => {
     setSelectedColor(color);
-    if (selectedObjectId && user) {
-      updateObject(selectedObjectId, { color }, user.uid).catch(console.error);
+    if (selectedObjectIds.size > 0 && user) {
+      if (selectedObjectIds.size === 1) {
+        const id = selectedObjectIds.values().next().value;
+        updateObject(id, { color }, user.uid).catch(console.error);
+      } else {
+        const updates = Array.from(selectedObjectIds).map(id => ({ id, changes: { color } }));
+        updateMultipleObjects(updates, user.uid).catch(console.error);
+      }
     }
-  }, [selectedObjectId, user, setSelectedColor]);
+  }, [selectedObjectIds, user, setSelectedColor]);
 
   const handleSignOut = async () => {
-    await leave(); // remove presence doc while still authenticated
+    await leave();
     signOut();
   };
 
@@ -55,13 +64,18 @@ function AppContent() {
 
   return (
     <div className="min-h-screen">
+      {!isOnline && (
+        <div className="fixed top-16 left-1/2 transform -translate-x-1/2 bg-yellow-50 px-4 py-2 rounded-lg shadow-lg border border-yellow-300 z-50">
+          <span className="text-sm text-yellow-800">Offline — changes will sync when reconnected</span>
+        </div>
+      )}
       <BoardToolbar
         selectedTool={selectedTool}
         selectedColor={selectedColor}
         stageScale={stageScale}
         onToolChange={setSelectedTool}
         onColorChange={handleColorChange}
-        hasSelection={!!selectedObjectId}
+        hasSelection={selectedObjectIds.size > 0}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onResetView={resetView}
@@ -82,8 +96,10 @@ function AppContent() {
         onDragEnd={handleDragEnd}
         presenceUsers={presenceUsers}
         onCursorMove={updateCursorPosition}
-        selectedObjectId={selectedObjectId}
-        onSelectObject={setSelectedObjectId}
+        selectedObjectIds={selectedObjectIds}
+        onSelectObject={selectObject}
+        onSelectMultiple={selectMultiple}
+        onClearSelection={clearSelection}
       />
     </div>
   );

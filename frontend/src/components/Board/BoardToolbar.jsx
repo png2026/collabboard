@@ -1,17 +1,25 @@
 import { COLORS } from '../../utils/colors';
 
 const TOOL_ICON = {
-  SELECT: <span style={{ fontSize: 16, lineHeight: 1 }}>↖</span>,
+  SELECT: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block' }}><path d="M18 11V6a2 2 0 0 0-4 0" fill="#F3F4F6" /><path d="M14 10V4a2 2 0 0 0-4 0v6" fill="#F3F4F6" /><path d="M10 10.5V2a2 2 0 0 0-4 0v9" fill="#F3F4F6" /><path d="M18 11a2 2 0 0 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.46-3.46a2 2 0 0 1 2.83-2.83L8 16" fill="#F3F4F6" /></svg>,
   STICKY_NOTE: <span style={{ display: 'inline-block', width: 18, height: 18, backgroundColor: '#FDE68A', border: '1.5px solid #D1D5DB', borderRadius: 2 }} />,
   RECTANGLE: <span style={{ display: 'inline-block', width: 18, height: 18, backgroundColor: '#E5E7EB', border: '1.5px solid #9CA3AF', borderRadius: 2 }} />,
   CIRCLE: <span style={{ display: 'inline-block', width: 18, height: 18, backgroundColor: '#E5E7EB', border: '1.5px solid #9CA3AF', borderRadius: '50%' }} />,
+  LINE: <span style={{ display: 'inline-block', width: 18, height: 2, backgroundColor: '#6B7280', transform: 'rotate(-30deg)' }} />,
+  TEXT: <span style={{ fontSize: 18, fontWeight: 'bold', lineHeight: 1, fontFamily: 'serif' }}>T</span>,
+  FRAME: <span style={{ display: 'inline-block', width: 18, height: 18, border: '2px dashed #9CA3AF', borderRadius: 3 }} />,
+  CONNECTOR: <span style={{ fontSize: 16, lineHeight: 1 }}>↗</span>,
 };
 
 const TOOLS = [
-  { id: 'SELECT', label: 'Select' },
+  { id: 'SELECT', label: 'Select (Shift+drag to multi-select)' },
   { id: 'STICKY_NOTE', label: 'Sticky Note' },
   { id: 'RECTANGLE', label: 'Rectangle' },
   { id: 'CIRCLE', label: 'Circle' },
+  { id: 'LINE', label: 'Line' },
+  { id: 'TEXT', label: 'Text' },
+  { id: 'FRAME', label: 'Frame' },
+  { id: 'CONNECTOR', label: 'Connector' },
 ];
 
 export default function BoardToolbar({

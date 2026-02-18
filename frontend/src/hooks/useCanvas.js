@@ -35,6 +35,9 @@ export function useCanvas() {
   }, []);
 
   const handleDragEnd = useCallback((e) => {
+    // Only update stage position when the Stage itself is dragged (panning),
+    // not when child objects are dragged (their dragend events bubble up here)
+    if (e.target !== e.target.getStage()) return;
     setStagePosition({
       x: e.target.x(),
       y: e.target.y(),

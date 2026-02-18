@@ -7,6 +7,7 @@ export const COLORS = [
   { name: 'Orange', value: '#FED7AA', dark: '#FDBA74' },
   { name: 'Red', value: '#FECACA', dark: '#FCA5A5' },
   { name: 'Gray', value: '#E5E7EB', dark: '#D1D5DB' },
+  { name: 'Black', value: '#1F2937', dark: '#111827' },
 ];
 
 export const DEFAULT_COLOR = COLORS[0].value; // Yellow
@@ -15,6 +16,9 @@ export const TYPE_DEFAULT_COLORS = {
   stickyNote: '#FDE68A', // Yellow
   rectangle: '#E5E7EB',  // Gray
   circle: '#E5E7EB',     // Gray
+  line: '#6B7280',        // Medium gray
+  text: '#374151',        // Dark gray
+  frame: '#6B7280',       // Medium gray
 };
 
 export function getRandomColor() {

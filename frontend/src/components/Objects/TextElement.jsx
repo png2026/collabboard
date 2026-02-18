@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect, memo } from 'react';
-import { Group, Rect, Text } from 'react-konva';
+import { Group, Text } from 'react-konva';
 import { updateObject } from '../../services/board';
 import { useAuth } from '../../hooks/useAuth.js';
 
-const STICKY_NOTE_WIDTH = 200;
-const STICKY_NOTE_HEIGHT = 150;
-const PADDING = 10;
+const DEFAULT_FONT_SIZE = 20;
+const DEFAULT_WIDTH = 200;
 
-export default memo(function StickyNote({ object, isSelected, onSelect, onGroupDragMove, onGroupDragEnd, selectedObjectIds }) {
+export default memo(function TextElement({ object, onSelect, onGroupDragMove, onGroupDragEnd, selectedObjectIds }) {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const groupRef = useRef();
@@ -25,18 +24,20 @@ export default memo(function StickyNote({ object, isSelected, onSelect, onGroupD
     };
   }, []);
 
+  const fontSize = object.fontSize || DEFAULT_FONT_SIZE;
+  const width = object.width || DEFAULT_WIDTH;
+
   const handleTransformEnd = async (e) => {
     const node = e.target;
     const scaleX = node.scaleX();
-    const scaleY = node.scaleY();
     node.scaleX(1);
     node.scaleY(1);
     try {
       await updateObject(object.id, {
         x: node.x(),
         y: node.y(),
-        width: Math.max(50, (object.width || STICKY_NOTE_WIDTH) * scaleX),
-        height: Math.max(50, (object.height || STICKY_NOTE_HEIGHT) * scaleY),
+        width: Math.max(50, width * scaleX),
+        fontSize: Math.max(8, fontSize * scaleX),
         rotation: node.rotation(),
       }, user.uid);
     } catch (error) {
@@ -89,29 +90,27 @@ export default memo(function StickyNote({ object, isSelected, onSelect, onGroupD
     textareaRef.current = textarea;
     document.body.appendChild(textarea);
 
-    const w = object.width || STICKY_NOTE_WIDTH;
-    const h = object.height || STICKY_NOTE_HEIGHT;
-    const scaledPad = PADDING * scale;
-
     textarea.value = object.text || '';
     textarea.style.position = 'absolute';
-    textarea.style.top = viewportY + scaledPad + 'px';
-    textarea.style.left = viewportX + scaledPad + 'px';
-    textarea.style.width = (w - PADDING * 2) * scale + 'px';
-    textarea.style.height = (h - PADDING * 2) * scale + 'px';
-    textarea.style.fontSize = 14 * scale + 'px';
-    textarea.style.border = 'none';
-    textarea.style.padding = '0';
+    textarea.style.top = viewportY + 'px';
+    textarea.style.left = viewportX + 'px';
+    textarea.style.width = width * scale + 'px';
+    textarea.style.height = 'auto';
+    textarea.style.minHeight = fontSize * scale * 2 + 'px';
+    textarea.style.fontSize = fontSize * scale + 'px';
+    textarea.style.border = '2px solid #3B82F6';
+    textarea.style.borderRadius = '2px';
+    textarea.style.padding = '2px';
     textarea.style.margin = '0';
     textarea.style.overflow = 'hidden';
-    textarea.style.background = 'transparent';
+    textarea.style.background = 'white';
     textarea.style.outline = 'none';
     textarea.style.resize = 'none';
     textarea.style.lineHeight = '1.2';
-    textarea.style.fontFamily = 'Arial, sans-serif';
+    textarea.style.fontFamily = object.fontFamily || 'Arial, sans-serif';
     textarea.style.transformOrigin = 'left top';
     textarea.style.textAlign = 'left';
-    textarea.style.color = '#374151';
+    textarea.style.color = object.color || '#374151';
     textarea.style.zIndex = '1000';
 
     textarea.focus();
@@ -143,17 +142,13 @@ export default memo(function StickyNote({ object, isSelected, onSelect, onGroupD
     };
   };
 
-  const w = object.width || STICKY_NOTE_WIDTH;
-  const h = object.height || STICKY_NOTE_HEIGHT;
-
   return (
     <Group
       id={object.id}
       ref={groupRef}
       x={object.x}
       y={object.y}
-      width={w}
-      height={h}
+      width={width}
       rotation={object.rotation || 0}
       draggable
       onDragMove={handleDragMove}
@@ -164,33 +159,15 @@ export default memo(function StickyNote({ object, isSelected, onSelect, onGroupD
       onDblTap={handleDoubleClick}
       onTransformEnd={handleTransformEnd}
     >
-      <Rect
-        width={w}
-        height={h}
-        fill={object.color || '#FDE68A'}
-        stroke={isSelected ? '#3B82F6' : '#D1D5DB'}
-        strokeWidth={isSelected ? 2 : 1}
-        shadowColor="black"
-        shadowBlur={5}
-        shadowOpacity={0.2}
-        shadowOffsetX={2}
-        shadowOffsetY={2}
-        cornerRadius={4}
-      />
       {!isEditing && (
         <Text
           text={object.text || 'Double-click to edit'}
-          x={PADDING}
-          y={PADDING}
-          width={w - PADDING * 2}
-          height={h - PADDING * 2}
-          fontSize={14}
-          fontFamily="Arial, sans-serif"
-          fill={object.text ? '#374151' : '#9CA3AF'}
+          width={width}
+          fontSize={fontSize}
+          fontFamily={object.fontFamily || 'Arial, sans-serif'}
+          fill={object.text ? (object.color || '#374151') : '#9CA3AF'}
           wrap="word"
           align="left"
-          verticalAlign="top"
-          listening={false}
         />
       )}
     </Group>
