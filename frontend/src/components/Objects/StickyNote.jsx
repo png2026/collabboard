@@ -12,12 +12,16 @@ export default memo(function StickyNote({ object, isSelected, onSelect }) {
   const [isEditing, setIsEditing] = useState(false);
   const groupRef = useRef();
   const textareaRef = useRef(null);
+  const mountedRef = useRef(true);
 
-  // Clean up textarea on unmount
+  // Track mount state and clean up textarea on unmount
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       if (textareaRef.current && document.body.contains(textareaRef.current)) {
         document.body.removeChild(textareaRef.current);
+        textareaRef.current = null;
       }
     };
   }, []);
@@ -35,10 +39,12 @@ export default memo(function StickyNote({ object, isSelected, onSelect }) {
       document.body.removeChild(textareaRef.current);
       textareaRef.current = null;
     }
-    setIsEditing(false);
+    if (mountedRef.current) setIsEditing(false);
   };
 
   const handleDoubleClick = () => {
+    // Close any existing textarea first
+    removeTextarea();
     setIsEditing(true);
 
     const stage = groupRef.current.getStage();
@@ -75,12 +81,13 @@ export default memo(function StickyNote({ object, isSelected, onSelect }) {
     textarea.select();
 
     const handleSave = async () => {
+      if (!mountedRef.current) return;
       const newText = textarea.value;
       if (newText !== object.text) {
         try {
           await updateObject(object.id, { text: newText }, user.uid);
         } catch (error) {
-          console.error('Failed to update text:', error);
+          if (mountedRef.current) console.error('Failed to update text:', error);
         }
       }
       removeTextarea();

@@ -2,7 +2,7 @@ export default function UserList({ presenceUsers, currentUser, myColor }) {
   const allUsers = [
     // Current user always first
     {
-      id: currentUser?.uid,
+      id: currentUser?.uid ?? 'me',
       displayName: currentUser?.displayName || currentUser?.email || 'You',
       color: myColor,
       isMe: true,

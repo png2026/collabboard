@@ -38,8 +38,9 @@ export default function BoardCanvas({ stageScale, stagePosition, selectedTool, s
         // Don't delete if user is typing in an input/textarea
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
         e.preventDefault();
-        deleteObject(selectedObjectId).catch(console.error);
-        onSelectObject(null);
+        deleteObject(selectedObjectId)
+          .then(() => onSelectObject(null))
+          .catch(console.error);
       } else if (e.key === 'Escape') {
         onSelectObject(null);
       }

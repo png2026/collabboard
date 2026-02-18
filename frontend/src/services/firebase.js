@@ -11,6 +11,14 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
+// Validate required config
+const required = ['apiKey', 'authDomain', 'projectId', 'appId'];
+for (const key of required) {
+  if (!firebaseConfig[key]) {
+    throw new Error(`Missing Firebase config: ${key}. Check your .env file.`);
+  }
+}
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
