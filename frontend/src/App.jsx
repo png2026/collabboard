@@ -5,12 +5,15 @@ import { useCanvas } from './hooks/useCanvas';
 import { usePresence } from './hooks/usePresence';
 import { useSelection } from './hooks/useSelection';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
+import { useBoardObjects } from './hooks/useBoardObjects';
+import { useAiAgent } from './hooks/useAiAgent';
 import { updateObject, updateMultipleObjects } from './services/board';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoginPage from './components/Auth/LoginPage';
 import BoardCanvas from './components/Board/BoardCanvas';
 import BoardToolbar from './components/Board/BoardToolbar';
 import UserList from './components/Presence/UserList';
+import AiChatPanel from './components/AI/AiChatPanel';
 
 function AppContent() {
   const { user, loading, signOut } = useAuth();
@@ -31,6 +34,21 @@ function AppContent() {
   const { presenceUsers, updateCursorPosition, leave, myColor } = usePresence(user);
   const { selectedObjectIds, selectObject, selectMultiple, clearSelection } = useSelection();
   const isOnline = useNetworkStatus();
+
+  // Lift board objects to AppContent so both BoardCanvas and AI agent can access them
+  const { objects, loading: boardLoading, error: boardError } = useBoardObjects();
+
+  // Viewport center for AI placement hints
+  const getViewportCenter = useCallback(() => {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight - 60; // subtract toolbar height
+    return {
+      x: (-stagePosition.x + viewportWidth / 2) / stageScale,
+      y: (-stagePosition.y + viewportHeight / 2) / stageScale,
+    };
+  }, [stageScale, stagePosition]);
+
+  const ai = useAiAgent({ objects, user, getViewportCenter });
 
   const handleColorChange = useCallback((color) => {
     setSelectedColor(color);
@@ -81,6 +99,8 @@ function AppContent() {
         onResetView={resetView}
         onSignOut={handleSignOut}
         user={user}
+        onToggleAiPanel={ai.togglePanel}
+        isAiPanelOpen={ai.isPanelOpen}
       />
       <UserList
         presenceUsers={presenceUsers}
@@ -100,6 +120,17 @@ function AppContent() {
         onSelectObject={selectObject}
         onSelectMultiple={selectMultiple}
         onClearSelection={clearSelection}
+        objects={objects}
+        boardLoading={boardLoading}
+        boardError={boardError}
+      />
+      <AiChatPanel
+        isPanelOpen={ai.isPanelOpen}
+        onClose={ai.closePanel}
+        messages={ai.messages}
+        isLoading={ai.isLoading}
+        onSendCommand={ai.sendCommand}
+        onClearMessages={ai.clearMessages}
       />
     </div>
   );

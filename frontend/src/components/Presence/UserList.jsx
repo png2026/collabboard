@@ -11,7 +11,7 @@ export default function UserList({ presenceUsers, currentUser, myColor }) {
   ];
 
   return (
-    <div className="fixed top-16 right-4 z-40">
+    <div className="fixed top-16 left-4 z-40">
       <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-3 min-w-[160px]">
         <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
           Online ({allUsers.length})

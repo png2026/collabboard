@@ -38,6 +38,14 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+# Python backend
+backend/__pycache__/
+backend/app/__pycache__/
+backend/app/routes/__pycache__/
+backend/.env
+backend/venv/
+**/service-account*.json
+
 # Misc
 .cache/
 *.tsbuildinfo

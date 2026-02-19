@@ -1,6 +1,5 @@
 import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { Stage, Layer, Line } from 'react-konva';
-import { useBoardObjects } from '../../hooks/useBoardObjects';
 import { useAuth } from '../../hooks/useAuth.js';
 import { createObject, deleteObject, updateMultipleObjects } from '../../services/board';
 import { TYPE_DEFAULT_COLORS } from '../../utils/colors';
@@ -52,6 +51,7 @@ export default function BoardCanvas({
   stageScale, stagePosition, selectedTool, selectedColor,
   onWheel, onDragEnd, presenceUsers, onCursorMove,
   selectedObjectIds, onSelectObject, onSelectMultiple, onClearSelection,
+  objects: propObjects, boardLoading, boardError,
 }) {
   const containerRef = useRef(null);
   const stageRef = useRef(null);
@@ -78,7 +78,9 @@ export default function BoardCanvas({
   }, []);
 
   const { user } = useAuth();
-  const { objects, loading, error } = useBoardObjects();
+  const objects = propObjects || [];
+  const loading = boardLoading;
+  const error = boardError;
 
   // Sort objects by zIndex for proper layering
   const sortedObjects = useMemo(() => {

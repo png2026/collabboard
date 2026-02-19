@@ -34,6 +34,8 @@ export default function BoardToolbar({
   onSignOut,
   user,
   hasSelection,
+  onToggleAiPanel,
+  isAiPanelOpen,
 }) {
   const showColorPicker = selectedTool !== 'SELECT' || hasSelection;
   return (
@@ -110,6 +112,24 @@ export default function BoardToolbar({
               +
             </button>
           </div>
+
+          {/* AI Assistant Toggle */}
+          <button
+            onClick={onToggleAiPanel}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
+              isAiPanelOpen
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+            title="Toggle AI Assistant"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 8V4H8" />
+              <rect x="2" y="8" width="20" height="12" rx="2" />
+              <path d="M7 15h0M17 15h0" />
+            </svg>
+            AI
+          </button>
 
           {/* User Info */}
           <div className="flex items-center gap-3">
