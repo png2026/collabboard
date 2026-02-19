@@ -33,8 +33,15 @@ CollabBoard is an infinite canvas whiteboard that enables multiple users to coll
 - ✅ **Offline indicator**: Yellow banner when network is disconnected; changes sync on reconnect
 - ✅ **Test environment**: Separate Firestore collection (`test-board`) via `vite --mode test`
 
-### Post-MVP (Planned)
-- ⏳ **AI Integration**: Natural language commands for board manipulation
+### AI Board Agent (Complete)
+- ✅ **Natural Language Commands**: Chat-based AI assistant that creates, modifies, and organizes board objects
+- ✅ **AI Chat Panel**: Collapsible right-side drawer with conversation history
+- ✅ **Creation Commands**: "Create a yellow sticky note that says Hello World"
+- ✅ **Manipulation Commands**: "Move all pink sticky notes to the right", "Change color to blue"
+- ✅ **Layout Commands**: "Arrange these sticky notes in a grid"
+- ✅ **Complex Templates**: "Create a SWOT analysis", "Create a retrospective board with 3 columns"
+- ✅ **Viewport-Aware Placement**: AI places objects where the user is currently looking
+- ✅ **Real-time Sync**: AI-generated objects sync instantly to all connected users
 
 ## 🛠 Tech Stack
 
@@ -48,26 +55,44 @@ CollabBoard is an infinite canvas whiteboard that enables multiple users to coll
 - **Authentication**: Firebase Authentication
 - **Database**: Cloud Firestore (real-time sync via `onSnapshot` listeners)
 - **Hosting**: Firebase Hosting
-- **Future AI Backend**: FastAPI on Google Cloud Run + OpenAI GPT-4
+- **AI Backend**: FastAPI (Python 3.12) + OpenAI GPT-4 Turbo with function calling
+- **AI Auth**: Firebase Admin SDK for token verification
 
 ### Development Tools
 - Node.js 23.7.0
 - npm (package manager)
+- Python 3.12 (conda environment `collabboard`)
 - Firebase CLI
+- Google Cloud SDK (`gcloud`)
 - Git
 
 ## 📁 Project Structure
 
 ```
 collabboard_app/
+├── backend/                              # AI Agent API (FastAPI)
+│   ├── app/
+│   │   ├── routes/
+│   │   │   └── ai.py                    # POST /api/ai/command endpoint
+│   │   ├── auth.py                      # Firebase token verification
+│   │   ├── config.py                    # Pydantic settings (API keys, origins)
+│   │   ├── prompts.py                   # System prompt for GPT-4
+│   │   ├── schemas.py                   # Request/response models
+│   │   └── tools.py                     # 11 OpenAI function calling definitions
+│   ├── main.py                          # FastAPI app entry point
+│   ├── requirements.txt                 # Python dependencies
+│   ├── Dockerfile                       # Cloud Run deployment
+│   └── .env.example                     # Backend env template
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
+│   │   │   ├── AI/
+│   │   │   │   └── AiChatPanel.jsx      # Right-side AI chat drawer
 │   │   │   ├── Auth/
 │   │   │   │   └── LoginPage.jsx         # Authentication UI
 │   │   │   ├── Board/
 │   │   │   │   ├── BoardCanvas.jsx       # Main Konva Stage + pan/zoom + selection + shortcuts
-│   │   │   │   ├── BoardToolbar.jsx      # Tool selection, color picker, zoom controls
+│   │   │   │   ├── BoardToolbar.jsx      # Tool selection, color picker, zoom, AI toggle
 │   │   │   │   ├── SelectionRect.jsx     # Rubber-band selection rectangle
 │   │   │   │   └── TransformerComponent.jsx # Konva Transformer (resize/rotate handles)
 │   │   │   ├── Objects/
@@ -86,6 +111,7 @@ collabboard_app/
 │   │   │   └── ErrorBoundary.jsx         # Crash recovery with reload button
 │   │   ├── hooks/
 │   │   │   ├── AuthContext.js            # Shared auth context
+│   │   │   ├── useAiAgent.js            # AI chat state + command orchestration
 │   │   │   ├── useAuth.js               # useAuth hook (pure hook, no components)
 │   │   │   ├── useAuth.jsx              # AuthProvider component
 │   │   │   ├── useBoardObjects.js       # Real-time Firestore object sync
@@ -94,6 +120,7 @@ collabboard_app/
 │   │   │   ├── usePresence.js           # Presence tracking + throttled cursor updates
 │   │   │   └── useSelection.js          # Multi-select state (Set<id>, additive toggle)
 │   │   ├── services/
+│   │   │   ├── ai.js                     # AI API client + action executor
 │   │   │   ├── firebase.js               # Firebase init (offline persistence enabled)
 │   │   │   ├── board.js                  # Firestore CRUD + batch writes for board objects
 │   │   │   └── presence.js               # Firestore presence operations + cursor colors
@@ -105,7 +132,7 @@ collabboard_app/
 │   │   ├── App.jsx                       # Main app component
 │   │   ├── main.jsx                      # App entry point
 │   │   └── index.css                     # Global styles + Tailwind
-│   ├── .env.example                      # Firebase config template
+│   ├── .env.example                      # Firebase + AI API config template
 │   ├── firestore.rules                   # Firestore security rules
 │   ├── firebase.json                     # Firebase config
 │   ├── tailwind.config.js                # Tailwind configuration
@@ -122,7 +149,10 @@ collabboard_app/
 ### Prerequisites
 - Node.js 23.7.0 or higher
 - npm
+- Python 3.12 (via conda: `conda create -n collabboard python=3.12`)
 - Firebase account
+- OpenAI API key
+- Google Cloud SDK (`brew install --cask google-cloud-sdk`)
 - Git
 
 ### Installation
@@ -133,13 +163,13 @@ collabboard_app/
    cd collabboard_app
    ```
 
-2. **Install dependencies**
+2. **Install frontend dependencies**
    ```bash
    cd frontend
    npm install
    ```
 
-3. **Configure Firebase**
+3. **Configure Firebase (frontend)**
 
    Create a `frontend/.env` file with your Firebase project credentials:
    ```env
@@ -149,16 +179,44 @@ collabboard_app/
    VITE_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
    VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
    VITE_FIREBASE_APP_ID=your-app-id
+   VITE_AI_API_URL=http://localhost:8080
    ```
 
-   The app reads these via `import.meta.env` in `frontend/src/services/firebase.js`.
-
-4. **Start development server**
+4. **Set up the AI backend**
    ```bash
+   conda activate collabboard
+   cd backend
+   pip install -r requirements.txt
+   ```
+
+   Create `backend/.env` from the example:
+   ```env
+   OPENAI_API_KEY=sk-your-openai-key
+   OPENAI_MODEL=gpt-4-turbo
+   ALLOWED_ORIGINS=["http://localhost:5173"]
+   ```
+
+   Authenticate with Google Cloud for Firebase token verification:
+   ```bash
+   gcloud auth application-default login --project your-firebase-project-id
+   ```
+
+5. **Start both servers**
+
+   Terminal 1 — Backend:
+   ```bash
+   conda activate collabboard
+   cd backend
+   uvicorn main:app --reload --port 8080
+   ```
+
+   Terminal 2 — Frontend:
+   ```bash
+   cd frontend
    npm run dev
    ```
 
-   App will be running at `http://localhost:5173`
+   Frontend at `http://localhost:5173`, backend at `http://localhost:8080`
 
 ### Firebase Setup
 
@@ -187,6 +245,8 @@ collabboard_app/
 4. Select a tool from the toolbar and click the canvas to place objects
 5. Use Select tool to pan the canvas; Shift+drag for rubber-band multi-select; scroll to zoom
 6. Keyboard shortcuts: Delete/Backspace (delete), Ctrl+D (duplicate), Ctrl+C/V (copy/paste), Escape (deselect)
+7. Click the **AI** button in the toolbar to open the chat panel
+8. Type natural language commands like "Create a yellow sticky note that says Hello World"
 
 ### Manual Test Plan
 
@@ -239,7 +299,17 @@ collabboard_app/
 - [ ] **Delete sync**: select + Delete key in A → disappears from B
 - [ ] **Sign-out cleanup**: sign out in A → user disappears from B's Online panel
 
-#### 7. Error Handling
+#### 7. AI Board Agent (requires backend running on port 8080)
+- [ ] Click **AI** button in toolbar → chat panel opens on right side
+- [ ] Type "Create a yellow sticky note that says Hello World" → sticky note appears on board
+- [ ] Type "Create a SWOT analysis" → 4 frames with labeled sticky notes appear
+- [ ] Type "Move all the pink sticky notes to the right" → matching objects move
+- [ ] Type "Change the color of the Hello World note to blue" → color changes
+- [ ] Type "Create a retrospective board with 3 columns" → complex template created
+- [ ] AI-created objects sync to other connected users in real-time
+- [ ] Click **AI** button again → chat panel closes
+
+#### 8. Error Handling
 - [ ] No console errors during normal usage
 - [ ] App doesn't crash — if it does, ErrorBoundary shows reload button
 
@@ -404,22 +474,19 @@ Firestore security rules:
 - ✅ Line tool
 - ✅ Offline indicator + test environment
 
-### AI Integration (Days 3-4)
-- FastAPI backend on Google Cloud Run
-- OpenAI GPT-4 function calling
-- Natural language commands:
-  - "Create a red sticky note that says 'Hello'"
-  - "Organize all notes into a grid"
-  - "Summarize all sticky notes"
-  - "Create a flowchart from this list"
-  - "Export board as PNG"
+### AI Board Agent (Days 3-4) ✅ COMPLETE
+- ✅ FastAPI backend with OpenAI GPT-4 Turbo function calling (11 tool definitions)
+- ✅ Firebase Auth token verification on backend
+- ✅ Collapsible AI chat panel (right-side drawer)
+- ✅ Frontend action executor (AI returns structured actions, frontend executes via board.js)
+- ✅ Viewport-aware object placement
+- ✅ Supports creation, manipulation, layout, and complex template commands
 
 ### Polish (Days 5-7)
 - Advanced UI animations
-- Comprehensive documentation
 - Demo video
 - Performance benchmarks
-- Cost analysis and optimization
+- Cloud Run deployment
 
 ## 💰 Cost Considerations
 
@@ -428,6 +495,10 @@ Firestore security rules:
 - Firestore: ~50k reads/day on free tier
 - Hosting: Free tier (10GB/month)
 - **Estimated monthly cost**: $0 (within free tier)
+
+**AI Backend Costs**
+- OpenAI GPT-4 Turbo: ~$0.01-0.03 per AI command (input + output tokens)
+- Cloud Run: Pay-per-request when deployed (free tier: 2M requests/month)
 
 **Scaling Concerns**
 - Cursor updates throttled to ~15/second to control Firestore write costs
@@ -455,7 +526,7 @@ Paul - [Your contact info]
 
 ---
 
-**Project Status**: ✅ MVP Complete + Priority 1 Post-MVP Complete
+**Project Status**: ✅ MVP Complete + Post-MVP Complete + AI Board Agent Complete
 
 **Last Updated**: February 18, 2026
 
