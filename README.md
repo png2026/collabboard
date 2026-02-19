@@ -82,6 +82,9 @@ collabboard_app/
 │   ├── main.py                          # FastAPI app entry point
 │   ├── requirements.txt                 # Python dependencies
 │   ├── Dockerfile                       # Cloud Run deployment
+│   ├── docker-compose.yml               # Local dev with hot reload + debug
+│   ├── deploy.sh                        # One-command Cloud Run deploy
+│   ├── .gcloudignore                    # Files excluded from cloud builds
 │   └── .env.example                     # Backend env template
 ├── frontend/
 │   ├── src/
@@ -325,15 +328,86 @@ This loads `.env.test` which sets `VITE_BOARD_ENV=test`. All board data is isola
 
 ### Deployment
 
-```bash
-# Build for production
-npm run build
+#### Frontend (Firebase Hosting)
 
-# Deploy to Firebase Hosting
+```bash
+cd frontend
+npm run build
 firebase deploy --only hosting
 ```
 
 Live URL: `https://collabboard-487701.web.app`
+
+#### Backend (Cloud Run)
+
+The AI backend deploys to Google Cloud Run from source (builds in the cloud via Cloud Build):
+
+```bash
+cd backend
+./deploy.sh
+```
+
+Service URL: `https://collabboard-backend-583286688849.us-central1.run.app`
+
+In production, the frontend does **not** call Cloud Run directly. Firebase Hosting rewrites `/api/**` requests to the Cloud Run service (configured in `firebase.json`), so all API calls stay same-origin — no CORS issues. Authentication is handled at the app level (Firebase token verification in FastAPI).
+
+The deploy script (`backend/deploy.sh`) handles:
+- Building the container image in Cloud Build using the existing `Dockerfile`
+- Setting env vars (`OPENAI_MODEL`, `GOOGLE_CLOUD_PROJECT`, `ALLOWED_ORIGINS`)
+- Mounting the OpenAI API key from **GCP Secret Manager** (secret: `openai-api-key`)
+
+**Prerequisites for deploying:**
+- Authenticated with `gcloud auth login`
+- Project set: `gcloud config set project collabboard-487701`
+- Required APIs enabled: Cloud Run, Cloud Build, Artifact Registry, Secret Manager
+
+#### Backend Local Development (Docker)
+
+Run the backend locally in Docker with hot reload and debugging support:
+
+```bash
+cd backend
+docker compose up --build
+```
+
+This uses `docker-compose.yml` which:
+- Mounts your local code as a volume (changes apply instantly)
+- Runs uvicorn with `--reload` for hot reloading
+- Mounts your local Google ADC credentials for Firebase auth
+- Exposes the backend on `http://localhost:8080`
+
+To debug with VS Code, attach to the running container via **Remote Explorer** (Dev Containers extension) — no extra dependencies needed.
+
+**Prerequisite:** Run `gcloud auth application-default login --project collabboard-487701` once to set up local credentials.
+
+#### Environment Files
+
+Vite loads env files by mode. Only `.env.example` files are committed to git — all others are gitignored.
+
+| File | Loaded when | Purpose |
+|------|-------------|---------|
+| `frontend/.env` | `npm run dev` (default) | Local development — AI API points to `localhost:8080` |
+| `frontend/.env.production` | `npm run build` | Production build — AI API URL is empty (same-origin via Firebase Hosting rewrite) |
+| `frontend/.env.test` | `npm run dev -- --mode test` | Uses isolated `test-board` Firestore collection |
+| `frontend/.env.example` | Never (template) | Documents required variables for new developers |
+| `backend/.env` | Local dev (docker-compose / uvicorn) | Backend secrets for local development |
+| `backend/.env.example` | Never (template) | Documents required backend variables |
+
+#### Secrets Management
+
+No secrets are committed to git. All `.env` files are in `.gitignore`.
+
+| Secret | Local dev | Production (Cloud Run) |
+|--------|-----------|------------------------|
+| **OpenAI API key** | `backend/.env` (local file) | GCP Secret Manager (secret: `openai-api-key`), mounted via `--set-secrets` |
+| **Firebase config** | `frontend/.env` (local file) | `frontend/.env.production` (baked into build). These are public client-side keys, secured by Firestore rules and Firebase Auth — not sensitive |
+| **Google ADC** (Firebase Admin) | `docker-compose.yml` mounts `~/.config/gcloud/application_default_credentials.json` | Automatic via Cloud Run's metadata server |
+
+**To rotate the OpenAI key:**
+1. Generate a new key at [platform.openai.com](https://platform.openai.com)
+2. Update locally: `backend/.env`
+3. Update in production: `gcloud secrets versions add openai-api-key --data-file=-` (paste key, then Ctrl+D)
+4. Redeploy: `cd backend && ./deploy.sh`
 
 ## 🧹 Factory Reset (Clean State for Testing)
 
@@ -409,10 +483,27 @@ Open `http://localhost:5173` — the board will be completely empty.
 
 ## 🔐 Security
 
-Firestore security rules:
+**Firestore rules:**
 - **Board objects**: Any authenticated user can read/write (shared board model)
 - **Presence**: Any authenticated user can read; writes restricted to own user document only
 - Presence cleanup: `leaveBoard()` deletes the presence doc before sign-out to ensure clean removal
+
+**API authentication:**
+- Backend verifies Firebase ID tokens on every request (`Authorization: Bearer <token>`)
+- Cloud Run IAM invoker check is disabled (`--no-invoker-iam-check`) — auth is handled at the app level
+- In production, API requests are proxied through Firebase Hosting (`/api/**` rewrite), so they stay same-origin
+
+**Why `--no-invoker-iam-check`?**
+The GCP org policy (`iam.allowedPolicyMemberDomains`) prevents granting `allUsers` or the Firebase Hosting system service account (`firebase-hosting@system.gserviceaccount.com`) invoker access to Cloud Run. Without this, Firebase Hosting rewrites would get 401/403 from Cloud Run's IAM layer before reaching the app. Disabling the IAM invoker check is safe here because the app validates Firebase tokens on every request — unauthenticated calls are rejected with 401 at the application level.
+
+**CORS:**
+- **Local dev**: Frontend (`:5173`) and backend (`:8080`) are different origins, so FastAPI's `CORSMiddleware` provides the necessary headers
+- **Production**: Firebase Hosting rewrites `/api/**` to Cloud Run (same origin), so no CORS is needed at all
+
+**Secrets:**
+- No secrets in git (all `.env` files gitignored)
+- Production OpenAI key stored in GCP Secret Manager, not as a plain env var
+- Firebase client-side keys are public by design — security enforced by Firestore rules and Firebase Auth, not key secrecy
 
 ## 🐛 Known Issues & Limitations
 
@@ -486,7 +577,7 @@ Firestore security rules:
 - Advanced UI animations
 - Demo video
 - Performance benchmarks
-- Cloud Run deployment
+- ✅ Cloud Run deployment
 
 ## 💰 Cost Considerations
 

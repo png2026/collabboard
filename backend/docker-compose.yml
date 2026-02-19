@@ -1,0 +1,15 @@
+services:
+  backend:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - ~/.config/gcloud/application_default_credentials.json:/gcp/adc.json:ro
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/gcp/adc.json
+    env_file:
+      - .env
+    command: uvicorn main:app --host 0.0.0.0 --port 8080 --reload
+    stdin_open: true
+    tty: true

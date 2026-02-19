@@ -2,7 +2,9 @@ import { auth } from './firebase';
 import { createObject, updateObject, deleteObject } from './board';
 import { getObjectCenter } from '../utils/connectorUtils';
 
-const AI_API_URL = import.meta.env.VITE_AI_API_URL || 'http://localhost:8080';
+// In production, VITE_AI_API_URL is empty — requests go to same origin via Firebase Hosting rewrite.
+// In local dev, it points to http://localhost:8080.
+const AI_API_URL = import.meta.env.VITE_AI_API_URL ?? 'http://localhost:8080';
 
 /**
  * Send a natural language command to the AI backend.
