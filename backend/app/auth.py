@@ -1,8 +1,12 @@
+import logging
+
 import firebase_admin
 from firebase_admin import auth as firebase_auth, credentials
 from fastapi import Header, HTTPException
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 # Initialize Firebase Admin SDK.
 # On Cloud Run this uses Application Default Credentials automatically.
@@ -21,4 +25,5 @@ async def verify_firebase_token(authorization: str = Header(...)) -> dict:
         decoded = firebase_auth.verify_id_token(token)
         return decoded
     except Exception as e:
+        logger.warning(f"Token verification failed: {e}")
         raise HTTPException(status_code=401, detail="Invalid token")
