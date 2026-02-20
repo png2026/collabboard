@@ -3,7 +3,8 @@ import logging
 import random
 
 from fastapi import APIRouter, Depends, HTTPException
-from openai import OpenAI
+from langfuse.openai import OpenAI # type: ignore
+from langfuse import observe
 
 from app.auth import verify_firebase_token
 from app.config import settings
@@ -158,7 +159,7 @@ def generate_bulk_actions(args: dict) -> list[Action]:
         actions.append(Action(type="create", objectType=obj_type, properties=props))
     return actions
 
-
+@observe()
 @router.post("/command", response_model=AiCommandResponse)
 async def ai_command(request: AiCommandRequest, user: dict = Depends(verify_firebase_token)):
     """Process a natural language AI command against the board."""
