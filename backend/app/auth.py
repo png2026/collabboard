@@ -2,12 +2,14 @@ import firebase_admin
 from firebase_admin import auth as firebase_auth, credentials
 from fastapi import Header, HTTPException
 
+from app.config import settings
+
 # Initialize Firebase Admin SDK.
 # On Cloud Run this uses Application Default Credentials automatically.
 # Locally, run: gcloud auth application-default login --project <project-id>
 if not firebase_admin._apps:
     cred = credentials.ApplicationDefault()
-    firebase_admin.initialize_app(cred, {"projectId": "collabboard-487701"})
+    firebase_admin.initialize_app(cred, {"projectId": settings.google_cloud_project})
 
 
 async def verify_firebase_token(authorization: str = Header(...)) -> dict:
@@ -19,4 +21,4 @@ async def verify_firebase_token(authorization: str = Header(...)) -> dict:
         decoded = firebase_auth.verify_id_token(token)
         return decoded
     except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
+        raise HTTPException(status_code=401, detail="Invalid token")

@@ -1,12 +1,17 @@
 import json
+import logging
 import random
+
 from fastapi import APIRouter, Depends, HTTPException
 from openai import OpenAI
-from app.config import settings
+
 from app.auth import verify_firebase_token
+from app.config import settings
+from app.prompts import SYSTEM_PROMPT
 from app.schemas import AiCommandRequest, AiCommandResponse, Action
 from app.tools import TOOLS
-from app.prompts import SYSTEM_PROMPT
+
+logger = logging.getLogger(__name__)
 
 COLORS = ["#FDE68A", "#FBCFE8", "#BFDBFE", "#BBF7D0", "#DDD6FE", "#FED7AA", "#FECACA", "#E5E7EB"]
 
@@ -14,7 +19,7 @@ router = APIRouter()
 client = OpenAI(api_key=settings.openai_api_key)
 
 
-def tool_call_to_action(tool_call) -> Action:
+def tool_call_to_action(tool_call) -> Action | None:
     """Convert an OpenAI tool call into a frontend Action."""
     name = tool_call.function.name
     args = json.loads(tool_call.function.arguments)
@@ -177,7 +182,7 @@ async def ai_command(request: AiCommandRequest, user: dict = Depends(verify_fire
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_message},
             ],
-            tools=TOOLS,
+            tools=TOOLS, # type: ignore
             tool_choice="auto",
             temperature=0.3,
             max_tokens=4096,
@@ -189,8 +194,8 @@ async def ai_command(request: AiCommandRequest, user: dict = Depends(verify_fire
         if message.tool_calls:
             for tc in message.tool_calls:
                 try:
-                    name = tc.function.name
-                    tc_args = json.loads(tc.function.arguments)
+                    name = tc.function.name # type: ignore
+                    tc_args = json.loads(tc.function.arguments) # type: ignore
 
                     if name == "bulkCreate":
                         actions.extend(generate_bulk_actions(tc_args))
@@ -203,11 +208,11 @@ async def ai_command(request: AiCommandRequest, user: dict = Depends(verify_fire
                         if action is not None:
                             actions.append(action)
                 except Exception as e:
-                    print(f"Error processing tool call {tc.function.name}: {e}")
+                    logger.error(f"Error processing tool call: {e}")
 
         summary = message.content or "Done!"
         return AiCommandResponse(actions=actions, message=summary, error=None)
 
     except Exception as e:
-        print(f"AI command error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"AI command error: {e}")
+        raise HTTPException(status_code=500, detail="AI request failed")
