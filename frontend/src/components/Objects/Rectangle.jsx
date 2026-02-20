@@ -66,11 +66,7 @@ export default memo(function Rectangle({ object, isSelected, onSelect, onGroupDr
         fill={object.color || '#E5E7EB'}
         stroke={isSelected ? '#3B82F6' : '#9CA3AF'}
         strokeWidth={isSelected ? 3 : 2}
-        shadowColor="black"
-        shadowBlur={4}
-        shadowOpacity={0.15}
-        shadowOffsetX={2}
-        shadowOffsetY={2}
+        shadowEnabled={false}
         cornerRadius={4}
       />
     </Group>

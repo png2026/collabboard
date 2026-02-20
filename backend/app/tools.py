@@ -201,4 +201,43 @@ TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "bulkCreate",
+            "description": "Create many random objects at once. Use this for requests like 'create 100 objects', 'fill the board', 'create N random objects'. Much faster than calling create tools individually.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "count": {"type": "integer", "description": "Number of objects to create"},
+                    "types": {
+                        "type": "array",
+                        "items": {"type": "string", "enum": ["stickyNote", "rectangle", "circle", "text", "line"]},
+                        "description": "Object types to include. Defaults to all types.",
+                    },
+                    "area": {
+                        "type": "object",
+                        "properties": {
+                            "x": {"type": "number"}, "y": {"type": "number"},
+                            "width": {"type": "number"}, "height": {"type": "number"},
+                        },
+                        "description": "Area to place objects in. Defaults to 5000x3000 starting at (0,0).",
+                    },
+                },
+                "required": ["count"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "deleteAll",
+            "description": "Delete ALL objects from the board. Use for requests like 'clear the board', 'delete everything', 'remove all objects'.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        },
+    },
 ]

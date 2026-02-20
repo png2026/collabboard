@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { Stage, Layer, Line } from 'react-konva';
 import { useAuth } from '../../hooks/useAuth.js';
-import { createObject, deleteObject, updateMultipleObjects } from '../../services/board';
+import { createObject, deleteMultipleObjects, updateMultipleObjects } from '../../services/board';
 import { TYPE_DEFAULT_COLORS } from '../../utils/colors';
 import { getObjectCenter } from '../../utils/connectorUtils';
 import ObjectFactory from '../Objects/ObjectFactory';
@@ -67,6 +67,11 @@ export default function BoardCanvas({
   // Clipboard for copy/paste
   const clipboardRef = useRef([]);
 
+  // Layer caching for pan/zoom performance
+  const layerRef = useRef(null);
+  const wheelTimeoutRef = useRef(null);
+  const isCachedRef = useRef(false);
+
   // Track Shift key for selection mode (Shift held = rubber-band select, otherwise pan)
   const [shiftHeld, setShiftHeld] = useState(false);
   useEffect(() => {
@@ -87,6 +92,36 @@ export default function BoardCanvas({
     return [...objects].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
   }, [objects]);
 
+  // --- Viewport culling: only render objects visible on screen ---
+  const viewportBounds = useMemo(() => {
+    const x = -stagePosition.x / stageScale;
+    const y = -stagePosition.y / stageScale;
+    const width = dimensions.width / stageScale;
+    const height = dimensions.height / stageScale;
+    const margin = 200; // buffer so objects don't pop in at the edge
+    return { x: x - margin, y: y - margin, width: width + margin * 2, height: height + margin * 2 };
+  }, [stagePosition.x, stagePosition.y, stageScale, dimensions.width, dimensions.height]);
+
+  const visibleObjects = useMemo(() => {
+    return sortedObjects.filter((obj) => {
+      if (obj.type === 'connector') {
+        const from = objects.find(o => o.id === obj.fromId);
+        const to = objects.find(o => o.id === obj.toId);
+        if (from && to) {
+          const minX = Math.min(from.x, to.x);
+          const minY = Math.min(from.y, to.y);
+          const maxX = Math.max(from.x + (from.width || 0), to.x + (to.width || 0));
+          const maxY = Math.max(from.y + (from.height || 0), to.y + (to.height || 0));
+          return rectsIntersect(viewportBounds, { x: minX, y: minY, width: maxX - minX, height: maxY - minY });
+        }
+        return true;
+      }
+      const bounds = getObjectBounds(obj);
+      if (!bounds) return true;
+      return rectsIntersect(viewportBounds, bounds);
+    });
+  }, [sortedObjects, viewportBounds, objects]);
+
   // Connector state is only meaningful when CONNECTOR tool is active.
   // Rather than resetting via useEffect (extra render), we derive effective values:
   const effectiveConnectingFrom = selectedTool === 'CONNECTOR' ? connectingFrom : null;
@@ -105,6 +140,53 @@ export default function BoardCanvas({
     updateDimensions();
     window.addEventListener('resize', updateDimensions);
     return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
+
+  // --- Layer caching for pan/zoom: draw 1 bitmap instead of N shapes ---
+  const cacheLayer = useCallback(() => {
+    const layer = layerRef.current;
+    if (!layer || isCachedRef.current) return;
+    try {
+      const stage = layer.getStage();
+      const scale = stage.scaleX();
+      // Cache at screen resolution to avoid huge offscreen canvases
+      layer.cache({ pixelRatio: Math.min(scale * (window.devicePixelRatio || 1), 2) });
+      isCachedRef.current = true;
+    } catch (e) {
+      console.warn('Layer cache failed:', e);
+    }
+  }, []);
+
+  const uncacheLayer = useCallback(() => {
+    if (!isCachedRef.current || !layerRef.current) return;
+    layerRef.current.clearCache();
+    isCachedRef.current = false;
+  }, []);
+
+  // Cache on pan start, uncache on pan end
+  const handleStageDragStart = useCallback((e) => {
+    if (e.target !== e.target.getStage()) return;
+    cacheLayer();
+  }, [cacheLayer]);
+
+  const wrappedDragEnd = useCallback((e) => {
+    if (e.target === e.target.getStage()) {
+      uncacheLayer();
+    }
+    onDragEnd(e);
+  }, [onDragEnd, uncacheLayer]);
+
+  // Cache on first wheel event, uncache 150ms after last wheel event
+  const wrappedWheel = useCallback((e) => {
+    cacheLayer();
+    clearTimeout(wheelTimeoutRef.current);
+    wheelTimeoutRef.current = setTimeout(uncacheLayer, 150);
+    onWheel(e);
+  }, [onWheel, cacheLayer, uncacheLayer]);
+
+  // Cleanup wheel timeout on unmount
+  useEffect(() => {
+    return () => clearTimeout(wheelTimeoutRef.current);
   }, []);
 
   // Duplicate helper: strips id/timestamps and offsets position
@@ -139,10 +221,10 @@ export default function BoardCanvas({
           .map(o => o.id);
         const allIds = [...new Set([...idsToDelete, ...connectorIds])];
         (async () => {
-          const results = await Promise.allSettled(allIds.map(id => deleteObject(id)));
-          const failed = results.filter(r => r.status === 'rejected');
-          if (failed.length > 0) {
-            console.error('Failed to delete some objects:', failed.map(r => r.reason));
+          try {
+            await deleteMultipleObjects(allIds);
+          } catch (err) {
+            console.error('Failed to delete objects:', err);
           }
           onClearSelection();
         })();
@@ -468,16 +550,17 @@ export default function BoardCanvas({
           scaleY={stageScale}
           x={stagePosition.x}
           y={stagePosition.y}
-          onWheel={onWheel}
-          onDragEnd={onDragEnd}
+          onWheel={wrappedWheel}
+          onDragStart={handleStageDragStart}
+          onDragEnd={wrappedDragEnd}
           onClick={handleStageClick}
           onTap={handleStageClick}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
         >
-          <Layer>
-            {sortedObjects.map((object) => (
+          <Layer ref={layerRef} perfectDrawEnabled={false} shadowForStrokeEnabled={false}>
+            {visibleObjects.map((object) => (
               <ObjectFactory
                 key={object.id}
                 object={object}
@@ -522,7 +605,7 @@ export default function BoardCanvas({
       {/* Status bar */}
       <div className="fixed bottom-4 left-4 bg-white px-3 py-2 rounded-lg shadow-lg border border-gray-200">
         <span className="text-sm text-gray-600">
-          Objects: {objects.length}
+          Objects: {objects.length} (visible: {visibleObjects.length})
           {effectiveConnectingFrom && ' | Click an object to connect'}
         </span>
       </div>

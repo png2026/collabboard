@@ -105,6 +105,49 @@ export async function updateMultipleObjects(updates, userId) {
 }
 
 /**
+ * Create multiple objects atomically using batched writes.
+ * Returns an array of the created document IDs.
+ */
+export async function createMultipleObjects(objectsData, userId) {
+  const createdIds = [];
+  let created = 0;
+  while (created < objectsData.length) {
+    const batch = writeBatch(db);
+    const end = Math.min(created + 500, objectsData.length);
+    for (let i = created; i < end; i++) {
+      const ref = doc(collection(db, `boards/${BOARD_ID}/objects`));
+      batch.set(ref, {
+        ...objectsData[i],
+        createdBy: userId,
+        updatedBy: userId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      createdIds.push(ref.id);
+    }
+    await batch.commit();
+    created = end;
+  }
+  return createdIds;
+}
+
+/**
+ * Delete multiple objects atomically using batched writes
+ */
+export async function deleteMultipleObjects(objectIds) {
+  let deleted = 0;
+  while (deleted < objectIds.length) {
+    const batch = writeBatch(db);
+    const end = Math.min(deleted + 500, objectIds.length);
+    for (let i = deleted; i < end; i++) {
+      batch.delete(doc(db, `boards/${BOARD_ID}/objects`, objectIds[i]));
+    }
+    await batch.commit();
+    deleted = end;
+  }
+}
+
+/**
  * Returns the current board ID ('default-board' or 'test-board' depending on VITE_BOARD_ENV).
  */
 export function getBoardId() {

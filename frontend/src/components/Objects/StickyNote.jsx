@@ -170,11 +170,7 @@ export default memo(function StickyNote({ object, isSelected, onSelect, onGroupD
         fill={object.color || '#FDE68A'}
         stroke={isSelected ? '#3B82F6' : '#D1D5DB'}
         strokeWidth={isSelected ? 2 : 1}
-        shadowColor="black"
-        shadowBlur={5}
-        shadowOpacity={0.2}
-        shadowOffsetX={2}
-        shadowOffsetY={2}
+        shadowEnabled={false}
         cornerRadius={4}
       />
       {!isEditing && (

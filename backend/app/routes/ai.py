@@ -1,4 +1,5 @@
 import json
+import random
 from fastapi import APIRouter, Depends, HTTPException
 from openai import OpenAI
 from app.config import settings
@@ -6,6 +7,8 @@ from app.auth import verify_firebase_token
 from app.schemas import AiCommandRequest, AiCommandResponse, Action
 from app.tools import TOOLS
 from app.prompts import SYSTEM_PROMPT
+
+COLORS = ["#FDE68A", "#FBCFE8", "#BFDBFE", "#BBF7D0", "#DDD6FE", "#FED7AA", "#FECACA", "#E5E7EB"]
 
 router = APIRouter()
 client = OpenAI(api_key=settings.openai_api_key)
@@ -110,8 +113,45 @@ def tool_call_to_action(tool_call) -> Action:
         return Action(type="update", objectId=args["objectId"], properties={"color": args["color"]})
     elif name == "deleteObject":
         return Action(type="delete", objectId=args["objectId"])
+    elif name in ("bulkCreate", "deleteAll"):
+        # Handled separately in ai_command — return None as sentinel
+        return None
     else:
         raise ValueError(f"Unknown tool: {name}")
+
+
+def generate_bulk_actions(args: dict) -> list[Action]:
+    """Generate N random create actions programmatically."""
+    count = args.get("count", 50)
+    types = args.get("types", ["stickyNote", "rectangle", "circle", "text", "line"])
+    area = args.get("area", {"x": 0, "y": 0, "width": 5000, "height": 3000})
+    ax, ay, aw, ah = area.get("x", 0), area.get("y", 0), area.get("width", 5000), area.get("height", 3000)
+
+    actions = []
+    for i in range(count):
+        obj_type = random.choice(types)
+        color = random.choice(COLORS)
+        x = random.randint(int(ax), int(ax + aw))
+        y = random.randint(int(ay), int(ay + ah))
+
+        if obj_type == "stickyNote":
+            props = {"x": x, "y": y, "text": f"Note {i+1}", "color": color,
+                     "width": random.randint(150, 250), "height": random.randint(120, 180), "rotation": 0}
+        elif obj_type == "rectangle":
+            props = {"x": x, "y": y, "color": color,
+                     "width": random.randint(80, 200), "height": random.randint(80, 200), "rotation": 0}
+        elif obj_type == "circle":
+            props = {"x": x, "y": y, "color": color, "radius": random.randint(30, 80), "rotation": 0}
+        elif obj_type == "text":
+            props = {"x": x, "y": y, "text": f"Text {i+1}", "color": "#374151",
+                     "fontSize": random.randint(14, 32), "width": random.randint(100, 300), "rotation": 0}
+        elif obj_type == "line":
+            props = {"x": x, "y": y, "color": color,
+                     "width": random.randint(80, 250), "strokeWidth": random.randint(2, 5), "rotation": 0}
+        else:
+            continue
+        actions.append(Action(type="create", objectType=obj_type, properties=props))
+    return actions
 
 
 @router.post("/command", response_model=AiCommandResponse)
@@ -149,7 +189,19 @@ async def ai_command(request: AiCommandRequest, user: dict = Depends(verify_fire
         if message.tool_calls:
             for tc in message.tool_calls:
                 try:
-                    actions.append(tool_call_to_action(tc))
+                    name = tc.function.name
+                    tc_args = json.loads(tc.function.arguments)
+
+                    if name == "bulkCreate":
+                        actions.extend(generate_bulk_actions(tc_args))
+                    elif name == "deleteAll":
+                        # Generate delete actions for all objects on the board
+                        for obj in request.boardState:
+                            actions.append(Action(type="delete", objectId=obj.id))
+                    else:
+                        action = tool_call_to_action(tc)
+                        if action is not None:
+                            actions.append(action)
                 except Exception as e:
                     print(f"Error processing tool call {tc.function.name}: {e}")
 
