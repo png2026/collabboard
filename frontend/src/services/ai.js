@@ -1,5 +1,5 @@
 import { auth } from './firebase';
-import { createObject, createMultipleObjects, updateMultipleObjects, deleteMultipleObjects } from './board';
+import { createObject, createMultipleObjects, updateMultipleObjects, deleteMultipleObjects, getBoardId } from './board';
 import { getObjectCenter } from '../utils/connectorUtils';
 
 // In production, VITE_AI_API_URL is empty — requests go to same origin via Firebase Hosting rewrite.
@@ -45,7 +45,7 @@ export async function sendAiCommand(command, boardState, viewportCenter) {
         arrowEnd: obj.arrowEnd,
         createdBy: obj.createdBy,
       })),
-      boardId: 'default-board',
+      boardId: getBoardId(),
       viewportCenter,
     }),
   });

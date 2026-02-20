@@ -31,7 +31,7 @@ CollabBoard is an infinite canvas whiteboard that enables multiple users to coll
 - ✅ **Text elements**: Standalone text on canvas, double-click to edit, scalable font size
 - ✅ **Frames**: Labeled grouping rectangles with dashed borders, rendered behind other objects via z-index sorting
 - ✅ **Offline indicator**: Yellow banner when network is disconnected; changes sync on reconnect
-- ✅ **Test environment**: Separate Firestore collection (`test-board`) via `vite --mode test`
+- ✅ **Test environment**: Separate Firestore collection (`dev-board`) via `vite --mode test`
 
 ### AI Board Agent (Complete)
 - ✅ **Natural Language Commands**: Chat-based AI assistant that creates, modifies, and organizes board objects
@@ -316,15 +316,15 @@ collabboard_app/
 - [ ] No console errors during normal usage
 - [ ] App doesn't crash — if it does, ErrorBoundary shows reload button
 
-### Test Environment
+### Dev Environment
 
-To use a separate Firestore collection (`test-board`) instead of production (`default-board`):
+To use a separate Firestore collection (`dev-board`) instead of production (`default-board`):
 
 ```bash
-npm run dev -- --mode test
+npm run dev -- --mode dev
 ```
 
-This loads `.env.test` which sets `VITE_BOARD_ENV=test`. All board data is isolated from production.
+This loads `.env.dev` which sets `VITE_BOARD_ENV=dev`. All board data is isolated from production.
 
 ### Deployment
 
@@ -388,7 +388,7 @@ Vite loads env files by mode. Only `.env.example` files are committed to git —
 |------|-------------|---------|
 | `frontend/.env` | `npm run dev` (default) | Local development — AI API points to `localhost:8080` |
 | `frontend/.env.production` | `npm run build` | Production build — AI API URL is empty (same-origin via Firebase Hosting rewrite) |
-| `frontend/.env.test` | `npm run dev -- --mode test` | Uses isolated `test-board` Firestore collection |
+| `frontend/.env.dev` | `npm run dev -- --mode dev` | Uses isolated `dev-board` Firestore collection |
 | `frontend/.env.example` | Never (template) | Documents required variables for new developers |
 | `backend/.env` | Local dev (docker-compose / uvicorn) | Backend secrets for local development |
 | `backend/.env.example` | Never (template) | Documents required backend variables |

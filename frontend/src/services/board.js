@@ -9,10 +9,10 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 
-// Set VITE_BOARD_ENV=test (via `vite --mode test` which loads .env.test)
-// to use an isolated 'test-board' Firestore collection instead of production.
+// Set VITE_BOARD_ENV=dev (via `vite --mode dev` which loads .env.dev)
+// to use an isolated 'dev-board' Firestore collection instead of production.
 const BOARD_ENV = import.meta.env.VITE_BOARD_ENV || 'prod';
-const BOARD_ID = BOARD_ENV === 'test' ? 'test-board' : 'default-board';
+const BOARD_ID = BOARD_ENV === 'dev' ? 'dev-board' : 'default-board';
 
 /**
  * CONFLICT RESOLUTION STRATEGY: Last-Write-Wins (LWW)
@@ -148,7 +148,7 @@ export async function deleteMultipleObjects(objectIds) {
 }
 
 /**
- * Returns the current board ID ('default-board' or 'test-board' depending on VITE_BOARD_ENV).
+ * Returns the current board ID ('default-board' or 'dev-board' depending on VITE_BOARD_ENV).
  */
 export function getBoardId() {
   return BOARD_ID;

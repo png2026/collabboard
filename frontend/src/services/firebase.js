@@ -35,7 +35,7 @@ export const db = initializeFirestore(app, {
 // Dev-only: expose perf testing helpers on window
 if (import.meta.env.DEV) {
   window.__perfTest = {
-    async populate(count = 500, boardId = 'test-board') {
+    async populate(count = 500, boardId = 'dev-board') {
       const colors = ['#FDE68A','#BFDBFE','#BBF7D0','#FECACA','#E9D5FF','#FED7AA'];
       const types = ['stickyNote','rectangle','circle','text','line'];
       const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -72,7 +72,7 @@ if (import.meta.env.DEV) {
       console.log('Done! Objects should appear on the board.');
     },
 
-    async cleanup(boardId = 'test-board') {
+    async cleanup(boardId = 'dev-board') {
       const snap = await getDocs(collection(db, `boards/${boardId}/objects`));
       const docs = snap.docs;
       let deleted = 0;
