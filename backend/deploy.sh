@@ -6,8 +6,10 @@ REGION="us-central1"
 SERVICE="collabboard-backend"
 ALLOWED_ORIGINS='["http://localhost:5173","https://collabboard-487701.web.app"]'
 
+COMPOSE_FILE="$(dirname "$0")/docker-compose.yml"
+
 echo "Running tests..."
-pytest tests/ -v || { echo "Tests failed, aborting deploy."; exit 1; }
+docker compose -f "$COMPOSE_FILE" run --rm -T backend pytest tests/ -v || { echo "Tests failed, aborting deploy."; exit 1; }
 
 echo "Deploying $SERVICE to Cloud Run ($REGION)..."
 
