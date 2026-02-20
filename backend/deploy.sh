@@ -6,6 +6,9 @@ REGION="us-central1"
 SERVICE="collabboard-backend"
 ALLOWED_ORIGINS='["http://localhost:5173","https://collabboard-487701.web.app"]'
 
+echo "Running tests..."
+pytest tests/ -v || { echo "Tests failed, aborting deploy."; exit 1; }
+
 echo "Deploying $SERVICE to Cloud Run ($REGION)..."
 
 gcloud run deploy "$SERVICE" \
