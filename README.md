@@ -43,6 +43,12 @@ CollabBoard is an infinite canvas whiteboard that enables multiple users to coll
 - ✅ **Viewport-Aware Placement**: AI places objects where the user is currently looking
 - ✅ **Real-time Sync**: AI-generated objects sync instantly to all connected users
 
+### Observability & DevOps (Complete)
+- ✅ **Langfuse Tracing**: AI request observability — tracks latency, token usage, and tool calls per command
+- ✅ **Dev Scripts**: One-command `dev.sh` for both frontend and backend local development
+- ✅ **Deploy Scripts**: One-command `deploy.sh` for both frontend (Firebase Hosting) and backend (Cloud Run)
+- ✅ **Pre-deploy Tests**: Backend deploy runs `pytest` in Docker before deploying; aborts on failure
+
 ## 🛠 Tech Stack
 
 ### Frontend
@@ -57,6 +63,7 @@ CollabBoard is an infinite canvas whiteboard that enables multiple users to coll
 - **Hosting**: Firebase Hosting
 - **AI Backend**: FastAPI (Python 3.12) + OpenAI GPT-4 Turbo with function calling
 - **AI Auth**: Firebase Admin SDK for token verification
+- **Observability**: Langfuse (LLM tracing and analytics)
 
 ### Development Tools
 - Node.js 23.7.0
@@ -83,7 +90,8 @@ collabboard_app/
 │   ├── requirements.txt                 # Python dependencies
 │   ├── Dockerfile                       # Cloud Run deployment
 │   ├── docker-compose.yml               # Local dev with hot reload + debug
-│   ├── deploy.sh                        # One-command Cloud Run deploy
+│   ├── dev.sh                           # One-command local dev (docker compose up)
+│   ├── deploy.sh                        # One-command Cloud Run deploy (runs tests first)
 │   ├── .gcloudignore                    # Files excluded from cloud builds
 │   └── .env.example                     # Backend env template
 ├── frontend/
@@ -135,6 +143,8 @@ collabboard_app/
 │   │   ├── App.jsx                       # Main app component
 │   │   ├── main.jsx                      # App entry point
 │   │   └── index.css                     # Global styles + Tailwind
+│   ├── dev.sh                            # One-command local dev (Vite dev mode)
+│   ├── deploy.sh                         # One-command Firebase Hosting deploy
 │   ├── .env.example                      # Firebase + AI API config template
 │   ├── firestore.rules                   # Firestore security rules
 │   ├── firebase.json                     # Firebase config
@@ -208,18 +218,20 @@ collabboard_app/
 
    Terminal 1 — Backend:
    ```bash
-   conda activate collabboard
    cd backend
-   uvicorn main:app --reload --port 8080
+   ./dev.sh
    ```
 
    Terminal 2 — Frontend:
    ```bash
    cd frontend
-   npm run dev
+   ./dev.sh
    ```
 
    Frontend at `http://localhost:5173`, backend at `http://localhost:8080`
+
+   > `backend/dev.sh` runs `docker compose up --build` (hot reload + local ADC credentials).
+   > `frontend/dev.sh` runs `npm run dev -- --mode dev` (uses isolated `dev-board` Firestore collection).
 
 ### Firebase Setup
 
@@ -332,9 +344,10 @@ This loads `.env.dev` which sets `VITE_BOARD_ENV=dev`. All board data is isolate
 
 ```bash
 cd frontend
-npm run build
-firebase deploy --only hosting
+./deploy.sh
 ```
+
+The deploy script builds the frontend (`npm run build`) and deploys to Firebase Hosting.
 
 Live URL: `https://collabboard-487701.web.app`
 
@@ -352,9 +365,10 @@ Service URL: `https://collabboard-backend-583286688849.us-central1.run.app`
 In production, the frontend does **not** call Cloud Run directly. Firebase Hosting rewrites `/api/**` requests to the Cloud Run service (configured in `firebase.json`), so all API calls stay same-origin — no CORS issues. Authentication is handled at the app level (Firebase token verification in FastAPI).
 
 The deploy script (`backend/deploy.sh`) handles:
+- **Running tests first** — `pytest` runs in the Docker container; deploy aborts if tests fail
 - Building the container image in Cloud Build using the existing `Dockerfile`
-- Setting env vars (`OPENAI_MODEL`, `GOOGLE_CLOUD_PROJECT`, `ALLOWED_ORIGINS`)
-- Mounting the OpenAI API key from **GCP Secret Manager** (secret: `openai-api-key`)
+- Setting env vars (`OPENAI_MODEL`, `GOOGLE_CLOUD_PROJECT`, `ALLOWED_ORIGINS`, `LANGFUSE_BASE_URL`)
+- Mounting secrets from **GCP Secret Manager**: `openai-api-key`, `langfuse-secret-key`, `langfuse-public-key`
 
 **Prerequisites for deploying:**
 - Authenticated with `gcloud auth login`
@@ -400,6 +414,7 @@ No secrets are committed to git. All `.env` files are in `.gitignore`.
 | Secret | Local dev | Production (Cloud Run) |
 |--------|-----------|------------------------|
 | **OpenAI API key** | `backend/.env` (local file) | GCP Secret Manager (secret: `openai-api-key`), mounted via `--set-secrets` |
+| **Langfuse keys** | `backend/.env` (local file) | GCP Secret Manager (secrets: `langfuse-secret-key`, `langfuse-public-key`), mounted via `--set-secrets` |
 | **Firebase config** | `frontend/.env` (local file) | `frontend/.env.production` (baked into build). These are public client-side keys, secured by Firestore rules and Firebase Auth — not sensitive |
 | **Google ADC** (Firebase Admin) | `docker-compose.yml` mounts `~/.config/gcloud/application_default_credentials.json` | Automatic via Cloud Run's metadata server |
 
@@ -573,11 +588,15 @@ The GCP org policy (`iam.allowedPolicyMemberDomains`) prevents granting `allUser
 - ✅ Viewport-aware object placement
 - ✅ Supports creation, manipulation, layout, and complex template commands
 
-### Polish (Days 5-7)
-- Advanced UI animations
-- Demo video
-- Performance benchmarks
+### Polish (Days 5-7) ✅ COMPLETE
+- ✅ Advanced UI animations
+- ✅ Demo video
+- ✅ Performance benchmarks
 - ✅ Cloud Run deployment
+- ✅ Langfuse observability (LLM tracing)
+- ✅ Dev scripts (`dev.sh` for frontend & backend)
+- ✅ Deploy scripts (`deploy.sh` for frontend & backend)
+- ✅ Pre-deploy test gate (pytest runs before backend deploy)
 
 ## 💰 Cost Considerations
 
@@ -617,8 +636,8 @@ Paul - [Your contact info]
 
 ---
 
-**Project Status**: ✅ MVP Complete + Post-MVP Complete + AI Board Agent Complete
+**Project Status**: ✅ MVP Complete + Post-MVP Complete + AI Board Agent Complete + Polish Complete
 
-**Last Updated**: February 18, 2026
+**Last Updated**: February 20, 2026
 
 **Live Demo**: https://collabboard-487701.web.app
