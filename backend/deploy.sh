@@ -17,8 +17,8 @@ gcloud run deploy "$SERVICE" \
   --source . \
   --region "$REGION" \
   --project "$PROJECT" \
-  --set-secrets "OPENAI_API_KEY=openai-api-key:latest" \
-  --set-env-vars "^;;^OPENAI_MODEL=gpt-4-turbo;;GOOGLE_CLOUD_PROJECT=$PROJECT;;ALLOWED_ORIGINS=$ALLOWED_ORIGINS" \
+  --set-secrets "OPENAI_API_KEY=openai-api-key:latest,LANGFUSE_SECRET_KEY=langfuse-secret-key:latest,LANGFUSE_PUBLIC_KEY=langfuse-public-key:latest" \
+  --set-env-vars "^;;^OPENAI_MODEL=gpt-4-turbo;;GOOGLE_CLOUD_PROJECT=$PROJECT;;ALLOWED_ORIGINS=$ALLOWED_ORIGINS;;LANGFUSE_BASE_URL=https://us.cloud.langfuse.com" \
   --no-invoker-iam-check
 
 echo ""
