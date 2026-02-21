@@ -5,14 +5,29 @@ import { getBoardId } from '../services/board';
 
 /**
  * Real-time sync hook for board objects
- * This is the heart of multiplayer collaboration
+ * This is the heart of multiplayer collaboration.
+ *
+ * Accepts the authenticated user so the Firestore listener is only started
+ * once the user is signed in (Firestore security rules require auth).
+ * Re-subscribes automatically if the user changes (login / logout / switch).
  */
-export function useBoardObjects() {
+export function useBoardObjects(user) {
   const [objects, setObjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // Don't subscribe until the user is authenticated — Firestore rules
+    // would reject the request and kill the listener permanently.
+    if (!user) {
+      setObjects([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
     const boardId = getBoardId();
     const objectsRef = collection(db, `boards/${boardId}/objects`);
     const q = query(objectsRef);
@@ -41,9 +56,9 @@ export function useBoardObjects() {
       }
     );
 
-    // Cleanup listener on unmount
+    // Cleanup listener on unmount or when user changes
     return () => unsubscribe();
-  }, []);
+  }, [user?.uid]);
 
   return { objects, loading, error };
 }

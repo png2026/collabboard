@@ -36,7 +36,7 @@ function AppContent() {
   const isOnline = useNetworkStatus();
 
   // Lift board objects to AppContent so both BoardCanvas and AI agent can access them
-  const { objects, loading: boardLoading, error: boardError } = useBoardObjects();
+  const { objects, loading: boardLoading, error: boardError } = useBoardObjects(user);
 
   // Viewport center for AI placement hints
   const getViewportCenter = useCallback(() => {
