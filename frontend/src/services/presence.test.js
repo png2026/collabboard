@@ -1,4 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// Mock firebase to avoid requiring env config for pure-function tests
+vi.mock('./firebase', () => ({ db: {} }));
+vi.mock('firebase/firestore', () => ({
+  doc: vi.fn(),
+  setDoc: vi.fn(),
+  updateDoc: vi.fn(),
+  deleteDoc: vi.fn(),
+  serverTimestamp: vi.fn(),
+}));
+
 import { getCursorColor, CURSOR_COLORS } from './presence';
 
 describe('presence', () => {

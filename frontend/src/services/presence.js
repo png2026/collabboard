@@ -51,6 +51,15 @@ export async function updateCursor(boardId, userId, x, y) {
 }
 
 /**
+ * Heartbeat — refresh lastSeen without changing cursor position.
+ * Keeps connected-but-idle users from appearing stale.
+ */
+export async function heartbeat(boardId, userId) {
+  const presenceRef = doc(db, `boards/${boardId}/presence`, userId);
+  await updateDoc(presenceRef, { lastSeen: serverTimestamp() });
+}
+
+/**
  * Remove user from presence when they leave
  */
 export async function leaveBoard(boardId, userId) {

@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { COLORS, DEFAULT_COLOR, TYPE_DEFAULT_COLORS, getRandomColor, getUserColor } from './colors';
 
 describe('colors', () => {
-  it('has 8 color options', () => {
-    expect(COLORS).toHaveLength(8);
+  it('has 9 color options', () => {
+    expect(COLORS).toHaveLength(9);
   });
 
   it('each color has name, value, and dark properties', () => {
@@ -25,10 +25,11 @@ describe('colors', () => {
     expect(TYPE_DEFAULT_COLORS.circle).toBe('#E5E7EB'); // Gray
   });
 
-  it('TYPE_DEFAULT_COLORS values are all valid palette colors', () => {
+  it('TYPE_DEFAULT_COLORS fill types use valid palette colors', () => {
     const values = COLORS.map((c) => c.value);
-    Object.values(TYPE_DEFAULT_COLORS).forEach((color) => {
-      expect(values).toContain(color);
+    // Fill-based types should use palette colors; line/text/frame use non-palette colors
+    ['stickyNote', 'rectangle', 'circle'].forEach((type) => {
+      expect(values).toContain(TYPE_DEFAULT_COLORS[type]);
     });
   });
 
